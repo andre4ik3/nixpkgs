@@ -30,6 +30,11 @@
 
       boot.initrd.availableKernelModules = [ "loop" "erofs" "overlay" ];
 
+      # Create the `/etc/NIXOS` tag file declaratively that would otherwise be
+      # created imperatively when not using the etc overlay.
+      # Can be disabled by setting `environment.etc.NIXOS.enable = false`.
+      environment.etc.NIXOS.text = "";
+
       boot.initrd.systemd = {
         mounts = [
           {
