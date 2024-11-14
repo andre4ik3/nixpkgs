@@ -974,20 +974,23 @@ fn do_system_switch(action: Action) -> anyhow::Result<()> {
         .canonicalize()
         .context("/run/current-system/sw/bin is missing")?;
 
-    let os_release = parse_os_release().context("Failed to parse os-release")?;
-
     let distro_id_re = Regex::new(format!("^\"?{}\"?$", distro_id).as_str())
         .context("Invalid regex for distro ID")?;
 
-    // This is a NixOS installation if it has /etc/NIXOS or a proper /etc/os-release.
-    if !Path::new("/etc/NIXOS").is_file()
-        && !os_release
-            .get("ID")
-            .map(|id| distro_id_re.is_match(id))
-            .unwrap_or_default()
+    if std::env::var("NIXOS_FORCE")
+        .as_deref()
+        .unwrap_or_default()
+        != "1"
     {
-        eprintln!("This is not a NixOS installation!");
-        die();
+        let marker_file_exists = Path::new("/etc/NIXOS").is_file();
+        let os_release = parse_os_release().context("Failed to parse os-release")?;
+        let os_is_nixos = os_release.get("ID").map(|id| distro_id_re.is_match(id)).unwrap_or_default();
+
+        // This is a NixOS installation if it has /etc/NIXOS or a proper /etc/os-release.
+        if !marker_file_exists && !os_is_nixos {
+            eprintln!("This is not a NixOS installation, and NIXOS_FORCE was not supplied!");
+            die();
+        }
     }
 
     std::fs::create_dir_all("/run/nixos").context("Failed to create /run/nixos directory")?;

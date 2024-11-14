@@ -90,10 +90,12 @@ EOF
     exit(1);
 }
 
-# This is a NixOS installation if it has /etc/NIXOS or a proper
-# /etc/os-release.
-if (!-f "/etc/NIXOS" && (read_file("/etc/os-release", err_mode => "quiet") // "") !~ /^ID="?@distroId@"?/msx) {
-    die("This is not a NixOS installation!\n");
+if (($ENV{"NIXOS_FORCE"} // "") ne "1") {
+    # This is a NixOS installation if it has /etc/NIXOS or a proper
+    # /etc/os-release.
+    if (!-f "/etc/NIXOS" && (read_file("/etc/os-release", err_mode => "quiet") // "") !~ /^ID="?@distroId@"?/msx) {
+        die("This is not a NixOS installation!\n");
+    }
 }
 
 make_path("/run/nixos", { mode => oct(755) });
