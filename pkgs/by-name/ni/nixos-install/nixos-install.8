@@ -21,6 +21,7 @@
 .Op Fl -no-channel-copy
 .Op Fl -no-root-password | -no-root-passwd
 .Op Fl -no-bootloader
+.Op Fl -no-etc-create
 .Op Fl -max-jobs | j Ar number
 .Op Fl -cores Ar number
 .Op Fl -option Ar name value
@@ -143,6 +144,13 @@ option, uses
 If this option is provided, do not copy the current
 .Dq nixos
 channel to the target host. Instead, use the specified derivation.
+.
+.It Fl -no-etc-create
+If this option is provided, do not create the
+.Pa /etc
+directory in the installation (for using together with the
+.Va system.etc.overlay.enable
+system configuration option).
 .
 .It Fl I Ar Path
 Add a path to the Nix expression search path. This option may be given multiple
