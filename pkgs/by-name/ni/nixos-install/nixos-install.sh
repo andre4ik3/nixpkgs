@@ -11,6 +11,7 @@ umask 0022
 
 # Parse the command line for the -I flag
 extraBuildFlags=()
+extraEnterFlags=()
 flakeFlags=()
 
 mountPoint=/mnt
@@ -85,6 +86,10 @@ while [ "$#" -gt 0 ]; do
             ;;
         --no-bootloader)
             noBootLoader=1
+            ;;
+        --no-etc-create)
+            noEtcCreate=1
+            extraEnterFlags+=("--no-etc-setup")
             ;;
         --show-trace|--impure|--keep-going)
             extraBuildFlags+=("$i")
@@ -233,8 +238,10 @@ nix-env --store "$mountPoint" "${extraBuildFlags[@]}" \
         -p "$mountPoint"/nix/var/nix/profiles/system --set "$system" "${verbosity[@]}"
 
 # Mark the target as a NixOS installation, otherwise switch-to-configuration will chicken out.
-mkdir -m 0755 -p "$mountPoint/etc"
-touch "$mountPoint/etc/NIXOS"
+if [[ -z $noEtcCreate ]]; then
+    mkdir -m 0755 -p "$mountPoint/etc"
+    touch "$mountPoint/etc/NIXOS"
+fi
 
 # Switch to the new system configuration.  This will install Grub with
 # a menu default pointing at the kernel/initrd/etc of the new
@@ -242,9 +249,11 @@ touch "$mountPoint/etc/NIXOS"
 if [[ -z $noBootLoader ]]; then
     echo "installing the boot loader..."
     # Grub needs an mtab.
-    ln -sfn /proc/mounts "$mountPoint"/etc/mtab
+    if [[ -z $noEtcCreate ]]; then
+        ln -sfn /proc/mounts "$mountPoint"/etc/mtab
+    fi
     export mountPoint
-    NIXOS_INSTALL_BOOTLOADER=1 nixos-enter --root "$mountPoint" -c "$(cat <<'EOF'
+    NIXOS_INSTALL_BOOTLOADER=1 nixos-enter --root "$mountPoint" $extraEnterFlags -c "$(cat <<'EOF'
       set -e
       # Create a bind mount for each of the mount points inside the target file
       # system. This preserves the validity of their absolute paths after changing
