@@ -13,6 +13,7 @@
 .Op Fl -system Ar system
 .Op Fl -command | c Ar shell-command
 .Op Fl -silent
+.Op Fl -no-etc-setup
 .Op Fl -help
 .Op Fl - Ar arguments ...
 .
@@ -42,6 +43,13 @@ The bash command to execute.
 .
 .It Fl -silent
 Suppresses all output from the activation script of the target system.
+.
+.It Fl -no-etc-setup
+Skips setup of the
+.Pa /etc/resolf.conf
+file to point to the host's. In addition, forces switching to the chroot environment even if a
+.Pa /etc/NIXOS
+tag file doesn't exist.
 .
 .It Fl -
 Interpret the remaining arguments as the program name and arguments to be invoked.
