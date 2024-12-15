@@ -48,6 +48,8 @@
       # Can be disabled by setting `environment.etc.NIXOS.enable = false`.
       environment.etc.NIXOS.text = "";
 
+      system.requiredKernelConfig = with config.lib.kernelConfig; [ (isEnabled "EROFS_FS") ];
+
       boot.initrd.systemd = {
         mounts = [
           {
