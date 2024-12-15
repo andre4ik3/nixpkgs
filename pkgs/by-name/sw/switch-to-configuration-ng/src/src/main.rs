@@ -999,10 +999,6 @@ fn do_system_switch(action: Action) -> anyhow::Result<()> {
         std::env::set_var("LOCALE_ARCHIVE", locale_archive);
     }
 
-    let current_system_bin = std::path::PathBuf::from("/run/current-system/sw/bin")
-        .canonicalize()
-        .context("/run/current-system/sw/bin is missing")?;
-
     let distro_id_re = Regex::new(format!("^\"?{}\"?$", distro_id).as_str())
         .context("Invalid regex for distro ID")?;
 
