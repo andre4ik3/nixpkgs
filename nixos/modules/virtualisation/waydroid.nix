@@ -20,59 +20,78 @@ let
     /dev/vndbinder = aidl2
     /dev/hwbinder = hidl
   '';
-
+  waydroidSessionFile = (pkgs.writeTextDir "share/wayland-sessions/waydroid.desktop" ''
+    [Desktop Entry]
+    Name=Waydroid
+    Exec=${pkgs.cage}/bin/cage -- ${pkgs.waydroid} show-full-ui
+    Type=Application
+  '').overrideAttrs { passthru.providedSessions = [ "waydroid" ]; };
 in
 {
 
   options.virtualisation.waydroid = {
-    enable = lib.mkEnableOption "Waydroid";
-  };
-
-  config = lib.mkIf cfg.enable {
-    assertions = lib.singleton {
-      assertion = lib.versionAtLeast (lib.getVersion config.boot.kernelPackages.kernel) "4.18";
-      message = "Waydroid needs user namespace support to work properly";
-    };
-
-    system.requiredKernelConfig = [
-      (kCfg.isEnabled "ANDROID_BINDER_IPC")
-      (kCfg.isEnabled "ANDROID_BINDERFS")
-      (kCfg.isEnabled "MEMFD_CREATE")
-    ];
-
-    /*
-      NOTE: we always enable this flag even if CONFIG_PSI_DEFAULT_DISABLED is not on
-      as reading the kernel config is not always possible and on kernels where it's
-      already on it will be no-op
-    */
-    boot.kernelParams = [ "psi=1" ];
-
-    environment.etc."gbinder.d/waydroid.conf".source = waydroidGbinderConf;
-
-    environment.systemPackages = with pkgs; [ waydroid ];
-
-    networking.firewall.trustedInterfaces = [ "waydroid0" ];
-
-    virtualisation.lxc.enable = true;
-
-    systemd.services.waydroid-container = {
-      description = "Waydroid Container";
-
-      wantedBy = [ "multi-user.target" ];
-
-      serviceConfig = {
-        Type = "dbus";
-        UMask = "0022";
-        ExecStart = "${pkgs.waydroid}/bin/waydroid -w container start";
-        BusName = "id.waydro.Container";
+    enable = lib.mkEnableOption "Waydroid, a container-based approach to booting a full Android system inside a Wayland desktop environment";
+    session = lib.mkOption {
+      description = "Run a fullscreen Waydroid session from your display-manager";
+      default = {};
+      type = lib.types.submodule {
+        options = {
+          enable = lib.mkEnableOption "the Waydroid session";
+        };
       };
     };
-
-    systemd.tmpfiles.rules = [
-      "d /var/lib/misc 0755 root root -" # for dnsmasq.leases
-    ];
-
-    services.dbus.packages = with pkgs; [ waydroid ];
   };
 
+  config = lib.mkIf cfg.enable (
+    lib.mkMerge [
+      {
+        assertions = lib.singleton {
+          assertion = lib.versionAtLeast (lib.getVersion config.boot.kernelPackages.kernel) "4.18";
+          message = "Waydroid needs user namespace support to work properly";
+        };
+
+        system.requiredKernelConfig = [
+          (kCfg.isEnabled "ANDROID_BINDER_IPC")
+          (kCfg.isEnabled "ANDROID_BINDERFS")
+          (kCfg.isEnabled "MEMFD_CREATE")
+        ];
+
+        /*
+          NOTE: we always enable this flag even if CONFIG_PSI_DEFAULT_DISABLED is not on
+          as reading the kernel config is not always possible and on kernels where it's
+          already on it will be no-op
+        */
+        boot.kernelParams = [ "psi=1" ];
+
+        environment.etc."gbinder.d/waydroid.conf".source = waydroidGbinderConf;
+
+        environment.systemPackages = with pkgs; [ waydroid ];
+
+        networking.firewall.trustedInterfaces = [ "waydroid0" ];
+
+        virtualisation.lxc.enable = true;
+
+        systemd.services.waydroid-container = {
+          description = "Waydroid Container";
+          wantedBy = [ "multi-user.target" ];
+
+          serviceConfig = {
+            Type = "dbus";
+            UMask = "0022";
+            ExecStart = "${pkgs.waydroid}/bin/waydroid -w container start";
+            BusName = "id.waydro.Container";
+          };
+        };
+
+        systemd.tmpfiles.rules = [
+          "d /var/lib/misc 0755 root root -" # for dnsmasq.leases
+        ];
+
+        services.dbus.packages = with pkgs; [ waydroid ];
+      }
+      (lib.mkIf cfg.session.enable {
+        services.displayManager.sessionPackages = [ waydroidSessionFile ];
+      })
+    ]
+  );
 }
