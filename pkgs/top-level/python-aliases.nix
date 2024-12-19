@@ -168,6 +168,7 @@ mapAliases ({
   django-mysql = throw "django-mysql has been removed, since it was an unused leaf package"; # added 2024-07-02
   django_nose = django-nose; # added 2023-07-25
   django-nose = throw "django-nose has been removed since it has not been maintained and there are no dependent packages"; # added 2024-05-21
+  django-q = throw "django-q has been removed because it is unmaintained and was unused"; # added 2024-12-13
   django_reversion = django-reversion; # added 2022-06-18
   django_polymorphic = django-polymorphic; # added 2022-05-24
   django_redis = django-redis; # added 2021-10-11
@@ -285,6 +286,7 @@ mapAliases ({
   ipython_genutils = ipython-genutils; # added 2023-10-12
   influxgraph = throw "influxgraph has been removed because it is no longer maintained"; # added 2022-07-10
   itanium_demangler = itanium-demangler; # added 2022-10-17
+  jaeger-client = throw "jaeger-client was removed because it is deprecated upstream. OpenTelemetry is recommended instead."; # Added 2024-12-09
   jaraco_classes = jaraco-classes; # added 2023-07-14
   jaraco_collections = jaraco-collections; # added 2023-07-14
   jaraco_functools = jaraco-functools; # added 2023-07-14
@@ -399,6 +401,7 @@ mapAliases ({
   openllm-client = throw "openllm-client has been removed, since it is abandoned due to a change in philosophy"; # added 2024-08-24
   openllm-core = throw "openllm-core has been removed, since it is abandoned due to a change in philosophy"; # added 2024-08-24
   opsdroid_get_image_size = opsdroid-get-image-size; # added 2023-10-16
+  opentracing = throw "The opentracing Python module was removed due to being unmaintained upstream. Use OpenTelemetry instead."; # Added 2024-12-09
   ordereddict = throw "ordereddict has been removed because it is only useful on unsupported python versions."; # added 2022-05-28
   pafy = throw "pafy has been removed because it is unmaintained and only a dependency of mps-youtube, itself superseded by yewtube"; # Added 2023-01-19
   pam = python-pam; # added 2020-09-07.

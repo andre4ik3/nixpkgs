@@ -1285,9 +1285,7 @@ in
   };
 
   hex-nvim = super.hex-nvim.overrideAttrs {
-    postPatch = ''
-      substituteInPlace lua/hex.lua --replace xxd ${xxd}/bin/xxd
-    '';
+    runtimeDeps = [ xxd ];
     nvimRequireCheck = "hex";
   };
 
@@ -1880,7 +1878,7 @@ in
       nvim-nio
       plenary-nvim
     ];
-    nvimRequirecheck = "neotest";
+    nvimRequireCheck = "neotest";
   };
 
   neotest-bash = super.neotest-bash.overrideAttrs {
@@ -1962,7 +1960,8 @@ in
       nvim-nio
       plenary-nvim
     ];
-    nvimRequirecheck = "neotest-gtest";
+    # broken
+    # nvimRequireCheck = "neotest-gtest";
   };
 
   neotest-haskell = super.neotest-haskell.overrideAttrs {
@@ -1978,7 +1977,7 @@ in
       nvim-nio
       plenary-nvim
     ];
-    nvimRequirecheck = "neotest-java";
+    nvimRequireCheck = "neotest-java";
   };
 
   neotest-jest = super.neotest-jest.overrideAttrs {
@@ -2003,7 +2002,7 @@ in
       nvim-nio
       plenary-nvim
     ];
-    nvimRequirecheck = "neotest-pest";
+    nvimRequireCheck = "neotest-pest";
   };
 
   neotest-phpunit = super.neotest-phpunit.overrideAttrs {
@@ -2031,7 +2030,7 @@ in
       nvim-nio
       plenary-nvim
     ];
-    nvimRequirecheck = "neotest-plenary";
+    nvimRequireCheck = "neotest-plenary";
   };
 
   neotest-python = super.neotest-python.overrideAttrs {
@@ -2040,7 +2039,7 @@ in
       nvim-nio
       plenary-nvim
     ];
-    nvimRequirecheck = "neotest-python";
+    nvimRequireCheck = "neotest-python";
   };
 
   neotest-rspec = super.neotest-rspec.overrideAttrs {
@@ -2064,7 +2063,7 @@ in
       nvim-nio
       plenary-nvim
     ];
-    nvimRequirecheck = "neotest-scala";
+    nvimRequireCheck = "neotest-scala";
   };
 
   neotest-testthat = super.neotest-testthat.overrideAttrs {
@@ -2073,7 +2072,7 @@ in
       nvim-nio
       plenary-nvim
     ];
-    nvimRequirecheck = "neotest-testthat";
+    nvimRequireCheck = "neotest-testthat";
   };
 
   neotest-vitest = super.neotest-vitest.overrideAttrs {
@@ -2099,7 +2098,7 @@ in
       plenary-nvim
       nui-nvim
     ];
-    nvimRequirecheck = "neo-tree";
+    nvimRequireCheck = "neo-tree";
   };
 
   netman-nvim = super.netman-nvim.overrideAttrs {
@@ -2129,7 +2128,7 @@ in
 
   noice-nvim = super.noice-nvim.overrideAttrs {
     dependencies = [ self.nui-nvim ];
-    nvimRequirecheck = "noice";
+    nvimRequireCheck = "noice";
   };
 
   none-ls-nvim = super.none-ls-nvim.overrideAttrs {
@@ -2548,7 +2547,7 @@ in
 
   otter-nvim = super.otter-nvim.overrideAttrs {
     dependencies = [ self.nvim-lspconfig ];
-    nvimRequirecheck = "otter";
+    nvimRequireCheck = "otter";
   };
 
   outline-nvim = super.outline-nvim.overrideAttrs {
@@ -2738,7 +2737,6 @@ in
   };
 
   roslyn-nvim = super.roslyn-nvim.overrideAttrs {
-    dependencies = [ self.nvim-lspconfig ];
     nvimRequireCheck = "roslyn";
   };
 
@@ -3670,7 +3668,7 @@ in
   };
 
   vim-tabby = super.vim-tabby.overrideAttrs {
-    nvimRequirecheck = "tabby";
+    nvimRequireCheck = "tabby";
   };
 
   vim-textobj-entire = super.vim-textobj-entire.overrideAttrs {

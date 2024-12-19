@@ -135,7 +135,7 @@ in {
   archi = handleTest ./archi.nix {};
   aria2 = handleTest ./aria2.nix {};
   armagetronad = handleTest ./armagetronad.nix {};
-  artalk = handleTest ./artalk.nix {};
+  artalk = runTest ./artalk.nix;
   atd = handleTest ./atd.nix {};
   atop = handleTest ./atop.nix {};
   atticd = runTest ./atticd.nix;
@@ -217,6 +217,7 @@ in {
   coder = handleTest ./coder.nix {};
   collectd = handleTest ./collectd.nix {};
   commafeed = handleTest ./commafeed.nix {};
+  conduwuit = runTest ./matrix/conduwuit.nix;
   connman = handleTest ./connman.nix {};
   consul = handleTest ./consul.nix {};
   consul-template = handleTest ./consul-template.nix {};
@@ -1147,6 +1148,7 @@ in {
   watchdogd = handleTest ./watchdogd.nix {};
   webhook = runTest ./webhook.nix;
   weblate = handleTest ./web-apps/weblate.nix {};
+  whisparr = handleTest ./whisparr.nix {};
   wiki-js = handleTest ./wiki-js.nix {};
   wine = handleTest ./wine.nix {};
   wireguard = handleTest ./wireguard {};
@@ -1162,6 +1164,7 @@ in {
   xandikos = handleTest ./xandikos.nix {};
   xautolock = handleTest ./xautolock.nix {};
   xfce = handleTest ./xfce.nix {};
+  xfce-wayland = handleTest ./xfce-wayland.nix {};
   xmonad = handleTest ./xmonad.nix {};
   xmonad-xdg-autostart = handleTest ./xmonad-xdg-autostart.nix {};
   xpadneo = handleTest ./xpadneo.nix {};
