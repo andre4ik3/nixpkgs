@@ -4,7 +4,7 @@
 , sigtool
 , makeWrapper, removeReferencesTo
 , attr, libcap, libcap_ng, socat, libslirp
-, CoreServices, Cocoa, Hypervisor, Kernel, rez, setfile, vmnet
+, apple-sdk_13, rez, setfile
 , guestAgentSupport ? (with stdenv.hostPlatform; isLinux || isNetBSD || isOpenBSD || isSunOS || isWindows) && !minimal
 , numaSupport ? stdenv.hostPlatform.isLinux && !stdenv.hostPlatform.isAarch32 && !minimal, numactl
 , seccompSupport ? stdenv.hostPlatform.isLinux && !minimal, libseccomp
@@ -22,7 +22,7 @@
 , xenSupport ? false, xen
 , cephSupport ? false, ceph
 , glusterfsSupport ? false, glusterfs, libuuid
-, openGLSupport ? sdlSupport, mesa, libepoxy, libdrm
+, openGLSupport ? sdlSupport, libgbm, libepoxy, libdrm
 , rutabagaSupport ? openGLSupport && !minimal && lib.meta.availableOn stdenv.hostPlatform rutabaga_gfx, rutabaga_gfx
 , virglSupport ? openGLSupport, virglrenderer
 , libiscsiSupport ? !minimal, libiscsi
@@ -56,16 +56,6 @@ assert lib.assertMsg (xenSupport -> hostCpuTargets == [ "i386-softmmu" ]) "Xen s
 
 let
   hexagonSupport = hostCpuTargets == null || lib.elem "hexagon" hostCpuTargets;
-
-  buildPlatformStdenv =
-    if stdenv.buildPlatform.isDarwin then
-      overrideSDK buildPackages.stdenv {
-        # Keep these values in sync with `all-packages.nix`.
-        darwinSdkVersion = "12.3";
-        darwinMinVersion = "12.0";
-      }
-    else
-      buildPackages.stdenv;
 in
 
 stdenv.mkDerivation (finalAttrs: {
@@ -75,14 +65,14 @@ stdenv.mkDerivation (finalAttrs: {
     + lib.optionalString nixosTestRunner "-for-vm-tests"
     + lib.optionalString toolsOnly "-utils"
     + lib.optionalString userOnly "-user";
-  version = "9.1.2";
+  version = "9.2.0";
 
   src = fetchurl {
     url = "https://download.qemu.org/qemu-${finalAttrs.version}.tar.xz";
-    hash = "sha256-Gf2ddTWlTW4EThhkAqo7OxvfqHw5LsiISFVZLIUQyW8=";
+    hash = "sha256-+FnwvGXh9TPQQLvoySvP7O5a8skhpmh8ZS+0TQib2JQ=";
   };
 
-  depsBuildBuild = [ buildPlatformStdenv.cc ]
+  depsBuildBuild = [ buildPackages.stdenv.cc ]
     ++ lib.optionals hexagonSupport [ pkg-config ];
 
   nativeBuildInputs = [
@@ -102,7 +92,7 @@ stdenv.mkDerivation (finalAttrs: {
     ++ lib.optionals (!minimal) [ dtc pixman vde2 lzo snappy libtasn1 gnutls nettle libslirp ]
     ++ lib.optionals (!userOnly) [ curl ]
     ++ lib.optionals ncursesSupport [ ncurses ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [ CoreServices Cocoa Hypervisor Kernel vmnet ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [ apple-sdk_13 ]
     ++ lib.optionals seccompSupport [ libseccomp ]
     ++ lib.optionals numaSupport [ numactl ]
     ++ lib.optionals alsaSupport [ alsa-lib ]
@@ -119,7 +109,7 @@ stdenv.mkDerivation (finalAttrs: {
     ++ lib.optionals xenSupport [ xen ]
     ++ lib.optionals cephSupport [ ceph ]
     ++ lib.optionals glusterfsSupport [ glusterfs libuuid ]
-    ++ lib.optionals openGLSupport [ mesa libepoxy libdrm ]
+    ++ lib.optionals openGLSupport [ libgbm libepoxy libdrm ]
     ++ lib.optionals rutabagaSupport [ rutabaga_gfx ]
     ++ lib.optionals virglSupport [ virglrenderer ]
     ++ lib.optionals libiscsiSupport [ libiscsi ]
@@ -144,16 +134,6 @@ stdenv.mkDerivation (finalAttrs: {
       sha256 = "sha256-oC+bRjEHixv1QEFO9XAm4HHOwoiT+NkhknKGPydnZ5E=";
       revert = true;
     })
-
-    # musl changes https://gitlab.com/qemu-project/qemu/-/issues/2215
-    (fetchpatch {
-      url = "https://gitlab.com/qemu-project/qemu/-/commit/ac1bbe8ca46c550b3ad99c85744119a3ace7b4f4.diff";
-      sha256 = "sha256-wSlf8+7WHk2Z4I5cLFa37MRroQucPIuFzzyWnG9IpeY=";
-    })
-    (fetchpatch {
-      url = "https://gitlab.com/qemu-project/qemu/-/commit/99174ce39e86ec6aea7bb7ce326b16e3eed9e3da.diff";
-      sha256 = "sha256-Cpt01d1ARoCTuJuC66no4doPgL+4/ZqnJTWwjU2MxnY=";
-    })
   ]
   ++ lib.optional nixosTestRunner ./force-uid0-on-9p.patch;
 
@@ -174,6 +154,8 @@ stdenv.mkDerivation (finalAttrs: {
       --replace '$source_path/VERSION' '$source_path/QEMU_VERSION'
     substituteInPlace meson.build \
       --replace "'VERSION'" "'QEMU_VERSION'"
+    substituteInPlace python/qemu/machine/machine.py \
+      --replace-fail /var/tmp "$TMPDIR"
   '';
 
   configureFlags = [
