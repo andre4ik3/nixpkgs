@@ -2129,6 +2129,7 @@
     github = "asymmetric";
     githubId = 101816;
     name = "Lorenzo Manacorda";
+    matrix = "@asymmetric:matrix.dapp.org.uk";
   };
   aszlig = {
     email = "aszlig@nix.build";
@@ -2136,6 +2137,11 @@
     githubId = 192147;
     name = "aszlig";
     keys = [ { fingerprint = "DD52 6BC7 767D BA28 16C0 95E5 6840 89CE 67EB B691"; } ];
+  };
+  atagen = {
+    name = "atagen";
+    github = "atagen";
+    githubId = 11548989;
   };
   atalii = {
     email = "taliauster@gmail.com";
@@ -3313,6 +3319,13 @@
     name = "Brendan Reis";
     github = "brendanreis";
     githubId = 10686906;
+  };
+  bretek = {
+    email = "josephmadden999@gmail.com";
+    github = "bretek";
+    githubId = 79257746;
+    name = "Joseph Madden";
+    keys = [ { fingerprint = "3CF8 E983 2219 AB4B 0E19  158E 6112 1921 C9F8 117C"; } ];
   };
   brettlyons = {
     email = "blyons@fastmail.com";
@@ -7010,7 +7023,10 @@
     github = "ethancedwards8";
     githubId = 60861925;
     name = "Ethan Carter Edwards";
-    keys = [ { fingerprint = "0E69 0F46 3457 D812 3387  C978 F93D DAFA 26EF 2458"; } ];
+    keys = [
+      { fingerprint = "0E69 0F46 3457 D812 3387  C978 F93D DAFA 26EF 2458"; }
+      { fingerprint = "2E51 F618 39D1 FA94 7A73  00C2 34C0 4305 D581 DBFE"; }
+    ];
   };
   ethercrow = {
     email = "ethercrow@gmail.com";
@@ -7356,7 +7372,7 @@
     github = "FedX-sudo";
     githubId = 66258975;
     name = "Fedx sudo";
-    matrix = "fedx:matrix.org";
+    matrix = "@fedx:matrix.org";
   };
   fee1-dead = {
     email = "ent3rm4n@gmail.com";
@@ -12800,7 +12816,7 @@
   };
   lenny = {
     name = "Lenny.";
-    matrix = "lenny@flipdot.org";
+    matrix = "@lenny:flipdot.org";
     keys = [ { fingerprint = "6D63 2D4D 0CFE 8D53 F5FD  C7ED 738F C800 6E9E A634"; } ];
   };
   leo248 = {
@@ -18530,8 +18546,8 @@
   };
   pwnwriter = {
     name = "Nabeen Tiwaree";
-    email = "hey@pwnwriter.xyz";
-    keys = [ { fingerprint = "B681 763F 9B5B DF27 9A13  9E0C 0544 A89B C519 20AA"; } ];
+    email = "hi@pwnwriter.me";
+    keys = [ { fingerprint = "C153 DE7C 0A0D 432E F033  2B0B A524 11EC 5582 DE3A"; } ];
     github = "pwnwriter";
     githubId = 90331517;
   };
@@ -20337,6 +20353,11 @@
     github = "scalavision";
     githubId = 3958212;
     name = "Tom Sorlie";
+  };
+  scd31 = {
+    name = "scd31";
+    github = "scd31";
+    githubId = 57571338;
   };
   schinmai-akamai = {
     email = "schinmai@akamai.com";
@@ -25016,6 +25037,12 @@
     githubId = 58453832;
     keys = [ { fingerprint = "FD0A C425 9EF5 4084 F99F 9B47 2ACC 9749 7C68 FAD4"; } ];
   };
+  yechielw = {
+    name = "yechielw";
+    email = "yechielworen@gmail.com";
+    github = "yechielw";
+    githubId = 41305372;
+  };
   yelite = {
     name = "Lite Ye";
     email = "yelite958@gmail.com";
@@ -25184,8 +25211,8 @@
   yuka = {
     email = "yuka@yuka.dev";
     matrix = "@yuka:yuka.dev";
-    github = "yu-re-ka";
-    githubId = 86169957;
+    github = "yuyuyureka";
+    githubId = 193895068;
     name = "Yureka";
   };
   Yumasi = {

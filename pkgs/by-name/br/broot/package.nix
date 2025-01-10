@@ -7,7 +7,6 @@
   makeWrapper,
   pkg-config,
   libgit2,
-  oniguruma,
   zlib,
   buildPackages,
   withClipboard ? true,
@@ -16,16 +15,16 @@
 
 rustPlatform.buildRustPackage rec {
   pname = "broot";
-  version = "1.44.4";
+  version = "1.44.5";
 
   src = fetchFromGitHub {
     owner = "Canop";
     repo = pname;
     rev = "v${version}";
-    hash = "sha256-tNmhLEB2L+2KFzsVk8hjh6gB6pxAeHqssr3e/9FFAOA=";
+    hash = "sha256-lLhf83srTHs7jIMiNshcGwue60F5zgbsJOO+w+3S9PU=";
   };
 
-  cargoHash = "sha256-sQX282C4rYtkbk7koO3ep9O0hPDpYHNYhVKBlYyXqZw=";
+  cargoHash = "sha256-nQFC9sZoGuAjKT8agDHVtYNOgKMMHzwQ0GY4uoaJHTU=";
 
   nativeBuildInputs = [
     installShellFiles
@@ -33,11 +32,9 @@ rustPlatform.buildRustPackage rec {
     pkg-config
   ];
 
-  # TODO: once https://github.com/Canop/broot/issues/956 is released, oniguruma can be removed.
   buildInputs =
     [
       libgit2
-      oniguruma
     ]
     ++ lib.optionals stdenv.hostPlatform.isDarwin [
       zlib

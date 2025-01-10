@@ -1055,6 +1055,7 @@
   ./services/networking/dnsmasq.nix
   ./services/networking/dnsproxy.nix
   ./services/networking/doh-proxy-rust.nix
+  ./services/networking/doh-server.nix
   ./services/networking/ejabberd.nix
   ./services/networking/envoy.nix
   ./services/networking/epmd.nix
@@ -1133,6 +1134,7 @@
   ./services/networking/lxd-image-server.nix
   ./services/networking/magic-wormhole-mailbox-server.nix
   ./services/networking/matterbridge.nix
+  ./services/networking/mptcpd.nix
   ./services/networking/microsocks.nix
   ./services/networking/mihomo.nix
   ./services/networking/minidlna.nix
@@ -1690,6 +1692,7 @@
   ./system/boot/systemd.nix
   ./system/boot/systemd/coredump.nix
   ./system/boot/systemd/dm-verity.nix
+  ./system/boot/systemd/fido2.nix
   ./system/boot/systemd/initrd-secrets.nix
   ./system/boot/systemd/initrd.nix
   ./system/boot/systemd/journald.nix
@@ -1750,7 +1753,6 @@
   ./tasks/trackpoint.nix
   ./testing/service-runner.nix
   ./virtualisation/amazon-options.nix
-  ./virtualisation/anbox.nix
   ./virtualisation/appvm.nix
   ./virtualisation/build-vm.nix
   ./virtualisation/container-config.nix
