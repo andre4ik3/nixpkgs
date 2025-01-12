@@ -4296,6 +4296,12 @@
     githubId = 71959829;
     name = "Cleeyv";
   };
+  clemjvdm = {
+    email = "clement.jvdm@gmail.com";
+    github = "clemjvdm";
+    githubId = 131002498;
+    name = "clement";
+  };
   clerie = {
     email = "nix@clerie.de";
     github = "clerie";
@@ -13358,6 +13364,12 @@
     githubId = 37505890;
     name = "Luis Wirth";
   };
+  lu1a = {
+    email = "lu5a@proton.me";
+    github = "lu1a";
+    githubId = 83420438;
+    name = "Lewis";
+  };
   LucaGuerra = {
     email = "luca@guerra.sh";
     github = "LucaGuerra";
@@ -13633,6 +13645,12 @@
     github = "lxea";
     githubId = 7910815;
     name = "Alex McGrath";
+  };
+  lyn = {
+    name = "Lyn";
+    matrix = "@lynatic:catgirl.cloud";
+    github = "lynatic1337";
+    githubId = 39234676;
   };
   lyndeno = {
     name = "Lyndon Sanche";

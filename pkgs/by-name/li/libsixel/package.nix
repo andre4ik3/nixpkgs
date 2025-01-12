@@ -10,13 +10,13 @@
 }:
 stdenv.mkDerivation rec {
   pname = "libsixel";
-  version = "1.10.3";
+  version = "1.10.5";
 
   src = fetchFromGitHub {
     owner = "libsixel";
     repo = "libsixel";
     rev = "v${version}";
-    sha256 = "1nny4295ipy4ajcxmmh04c796hcds0y7z7rv3qd17mj70y8j0r2d";
+    hash = "sha256-obzBZAknN3N7+Bvtd0+JHuXcemVb7wRv+Pt4VjS6Bck=";
   };
 
   buildInputs = [
@@ -43,7 +43,7 @@ stdenv.mkDerivation rec {
   meta = with lib; {
     description = "SIXEL library for console graphics, and converter programs";
     homepage = "https://github.com/libsixel/libsixel";
-    maintainers = [ ];
+    maintainers = with lib.maintainers; [ hzeller ];
     license = licenses.mit;
     platforms = platforms.unix;
   };
