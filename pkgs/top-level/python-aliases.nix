@@ -189,6 +189,7 @@ mapAliases ({
   doctest-ignore-unicode = throw "doctest-ignore-unicode has been removed since it has been unmaintained for 11 years"; # added 2024-05-20
   dogpile_cache = dogpile-cache; # added 2021-10-28
   dogpile-core = throw "dogpile-core is no longer maintained, use dogpile-cache instead"; # added 2021-11-20
+  dugong = throw "dugong is unmaintained since 2022 and has therefore been removed"; # added 2024-12-12
   eebrightbox = throw "eebrightbox is unmaintained upstream and has therefore been removed"; # added 2022-02-03
   EasyProcess = easyprocess; # added 2023-02-19
   email_validator = email-validator; # added 2022-06-22
@@ -226,6 +227,7 @@ mapAliases ({
   flask_testing = flask-testing; # added 2022-04-25
   flask_wtf = flask-wtf; # added 2022-05-24
   flask-autoindex = throw "flask-autoindex was removed, as it is not compatible with flask 3.0 and unmaintained since 2020.";
+  flask-common = throw "flask-common was removed, as it is not compatible with flask 3.0 and unmaintained since 2018."; # added 2025-01-11
   flask-basicauth = throw "flask-basicauth was removed, as it is not compatible with flask 3.0 and unmaintained since 2016.";
   flask-sessionstore = throw "flask-sessionstore was removed, as it is not compatible with flask 3.0 and unmaintained since 2017.";
   flask-sockets = throw "flask-sockets has been removed as the upstream repository was archived in 2022"; # Added 2025-01-01
@@ -584,6 +586,7 @@ mapAliases ({
   qasm2image = throw "qasm2image is no longer maintained (since November 2018), and is not compatible with the latest pythonPackages.qiskit versions."; # added 2020-12-09
   qds-sdk = throw "qds-sdk was removed as it is unmaintained upstream and depends on the removed boto package"; # Added 2024-09-22
   qds_sdk = qds-sdk; # added 2023-10-21
+  qmk-dotty-dict = throw "qmk-dotty-dict has been removed. It is no longer needed since the fixes have been merged into dotty-dict."; # added 2025-01-01
   Quandl = quandl; # added 2023-02-19
   quamash = throw "'quamash' has been removed, since it is unmaintained and broken"; # added 2024-10-17
   querystring_parser = querystring-parser; # added 2024-01-07

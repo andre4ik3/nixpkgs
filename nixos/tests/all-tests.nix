@@ -360,11 +360,7 @@ in {
   freenet = handleTest ./freenet.nix {};
   freeswitch = handleTest ./freeswitch.nix {};
   freetube = discoverTests (import ./freetube.nix);
-  freshrss-extensions = handleTest ./freshrss-extensions.nix {};
-  freshrss-sqlite = handleTest ./freshrss-sqlite.nix {};
-  freshrss-pgsql = handleTest ./freshrss-pgsql.nix {};
-  freshrss-http-auth = handleTest ./freshrss-http-auth.nix {};
-  freshrss-none-auth = handleTest ./freshrss-none-auth.nix {};
+  freshrss = handleTest ./freshrss {};
   frigate = handleTest ./frigate.nix {};
   frp = handleTest ./frp.nix {};
   frr = handleTest ./frr.nix {};
@@ -802,6 +798,7 @@ in {
   patroni = handleTestOn ["x86_64-linux"] ./patroni.nix {};
   pantalaimon = handleTest ./matrix/pantalaimon.nix {};
   pantheon = handleTest ./pantheon.nix {};
+  pantheon-wayland = handleTest ./pantheon-wayland.nix {};
   paperless = handleTest ./paperless.nix {};
   parsedmarc = handleTest ./parsedmarc {};
   password-option-override-ordering = handleTest ./password-option-override-ordering.nix {};
