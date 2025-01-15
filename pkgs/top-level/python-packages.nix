@@ -99,11 +99,7 @@ self: super: with self; {
 
   aenum = callPackage ../development/python-modules/aenum { };
 
-  aeppl = callPackage ../development/python-modules/aeppl { };
-
   aerosandbox = callPackage ../development/python-modules/aerosandbox { };
-
-  aesara = callPackage ../development/python-modules/aesara { };
 
   aesedb = callPackage ../development/python-modules/aesedb { };
 
@@ -588,6 +584,8 @@ self: super: with self; {
 
   amqtt = callPackage ../development/python-modules/amqtt { };
 
+  amshan = callPackage ../development/python-modules/amshan { };
+
   anchor-kr = callPackage ../development/python-modules/anchor-kr { };
 
   ancp-bids = callPackage ../development/python-modules/ancp-bids { };
@@ -1004,7 +1002,7 @@ self: super: with self; {
 
   audio-metadata = callPackage ../development/python-modules/audio-metadata { };
 
-  audioop-lts = callPackage ../development/python-modules/audioop-lts { };
+  audioop-lts = if pythonAtLeast "3.13" then callPackage ../development/python-modules/audioop-lts { } else null;
 
   audioread = callPackage ../development/python-modules/audioread { };
 
@@ -3937,8 +3935,6 @@ self: super: with self; {
 
   dufte = callPackage ../development/python-modules/dufte { };
 
-  dugong = callPackage ../development/python-modules/dugong { };
-
   dukpy = callPackage ../development/python-modules/dukpy { };
 
   dulwich = callPackage ../development/python-modules/dulwich {
@@ -4671,8 +4667,6 @@ self: super: with self; {
 
   flask = callPackage ../development/python-modules/flask { };
 
-  flask-common = callPackage ../development/python-modules/flask-common { };
-
   flask-compress = callPackage ../development/python-modules/flask-compress { };
 
   flask-cors = callPackage ../development/python-modules/flask-cors { };
@@ -4880,7 +4874,7 @@ self: super: with self; {
 
   oelint-parser = callPackage ../development/python-modules/oelint-parser { };
 
-  ohmepy = callPackage ../development/python-modules/ohmepy { };
+  ohme = callPackage ../development/python-modules/ohme { };
 
   openstep-parser = callPackage ../development/python-modules/openstep-parser { };
 
@@ -6953,6 +6947,8 @@ self: super: with self; {
 
   kerberos = callPackage ../development/python-modules/kerberos { };
 
+  kestra = callPackage ../development/python-modules/kestra { };
+
   keyboard = callPackage ../development/python-modules/keyboard { };
 
   keyring = callPackage ../development/python-modules/keyring { };
@@ -7149,9 +7145,9 @@ self: super: with self; {
 
   layoutparser = callPackage ../development/python-modules/layoutparser { };
 
-  lazr-config = callPackage ../development/python-modules/lazr/config.nix { };
+  lazr-config = callPackage ../development/python-modules/lazr-config { };
 
-  lazr-delegates = callPackage ../development/python-modules/lazr/delegates.nix { };
+  lazr-delegates = callPackage ../development/python-modules/lazr-delegates { };
 
   lazr-restfulclient = callPackage ../development/python-modules/lazr-restfulclient { };
 
@@ -9150,9 +9146,11 @@ self: super: with self; {
 
   netbox-documents = callPackage ../development/python-modules/netbox-documents { };
 
-  netbox-reorder-rack = callPackage ../development/python-modules/netbox-reorder-rack { };
-
   netbox-plugin-prometheus-sd = callPackage ../development/python-modules/netbox-plugin-prometheus-sd { };
+
+  netbox-qrcode = callPackage ../development/python-modules/netbox-qrcode { };
+
+  netbox-reorder-rack = callPackage ../development/python-modules/netbox-reorder-rack { };
 
   netcdf4 = callPackage ../development/python-modules/netcdf4 { };
 
@@ -13765,8 +13763,6 @@ self: super: with self; {
 
   qutip = callPackage ../development/python-modules/qutip { };
 
-  qmk-dotty-dict = callPackage ../development/python-modules/qmk-dotty-dict { };
-
   pythonqwt = callPackage ../development/python-modules/pythonqwt { };
 
   r2pipe = callPackage ../development/python-modules/r2pipe { };
@@ -15536,11 +15532,13 @@ self: super: with self; {
 
   stm32loader = callPackage ../development/python-modules/stm32loader { };
 
-  standard-aifc = callPackage ../development/python-modules/standard-aifc { };
+  standard-aifc = if pythonAtLeast "3.13" then callPackage ../development/python-modules/standard-aifc { } else null;
 
-  standard-chunk = callPackage ../development/python-modules/standard-chunk { };
+  standard-chunk = if pythonAtLeast "3.13" then callPackage ../development/python-modules/standard-chunk { } else null;
 
-  standard-telnetlib = callPackage ../development/python-modules/standard-telnetlib { };
+  standard-imghdr = if pythonAtLeast "3.13" then callPackage ../development/python-modules/standard-imghdr { } else null;
+
+  standard-telnetlib = if pythonAtLeast "3.13" then callPackage ../development/python-modules/standard-telnetlib { } else null;
 
   stone = callPackage ../development/python-modules/stone { };
 
@@ -16330,12 +16328,6 @@ self: super: with self; {
   };
 
   tornado = callPackage ../development/python-modules/tornado { };
-
-  # Used by circus and grab-site, 2020-08-29
-  tornado_4 = callPackage ../development/python-modules/tornado/4.nix { };
-
-  # Used by streamlit, 2021-01-29
-  tornado_5 = callPackage ../development/python-modules/tornado/5.nix { };
 
   torchprofile = callPackage ../development/python-modules/torchprofile { };
 
@@ -18301,8 +18293,6 @@ self: super: with self; {
   y-py = callPackage ../development/python-modules/y-py { };
 
   yabadaba = callPackage ../development/python-modules/yabadaba { };
-
-  yahooweather = callPackage ../development/python-modules/yahooweather { };
 
   yalesmartalarmclient = callPackage ../development/python-modules/yalesmartalarmclient { };
 
