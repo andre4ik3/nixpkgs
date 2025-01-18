@@ -1508,6 +1508,8 @@ self: super: with self; {
 
   basedtyping = callPackage ../development/python-modules/basedtyping { };
 
+  basedmypy = callPackage ../development/python-modules/basedmypy { };
+
   baseline = callPackage ../development/python-modules/baseline { };
 
   baselines = callPackage ../development/python-modules/baselines { };
@@ -1672,6 +1674,8 @@ self: super: with self; {
   biopandas = callPackage ../development/python-modules/biopandas { };
 
   biopython = callPackage ../development/python-modules/biopython { };
+
+  biosppy = callPackage ../development/python-modules/biosppy { };
 
   biothings-client = callPackage ../development/python-modules/biothings-client { };
 
@@ -7992,6 +7996,8 @@ self: super: with self; {
 
   mccabe = callPackage ../development/python-modules/mccabe { };
 
+  mcdreforged = callPackage ../development/python-modules/mcdreforged { };
+
   mcstatus = callPackage ../development/python-modules/mcstatus { };
 
   mcuuid = callPackage ../development/python-modules/mcuuid { };
@@ -9184,6 +9190,8 @@ self: super: with self; {
 
   neuralfoil = callPackage ../development/python-modules/neuralfoil { };
 
+  neurokit2 = callPackage ../development/python-modules/neurokit2 { };
+
   neuron-full = pkgs.neuron-full.override { python3 = python; };
 
   neuronpy = toPythonModule neuron-full;
@@ -10100,6 +10108,8 @@ self: super: with self; {
   pcodedmp = callPackage ../development/python-modules/pcodedmp { };
 
   pcpp = callPackage ../development/python-modules/pcpp { };
+
+  pcre2-py = callPackage ../development/python-modules/pcre2-py { };
 
   pdb2pqr = callPackage ../development/python-modules/pdb2pqr { };
 
@@ -15258,6 +15268,8 @@ self: super: with self; {
 
   sphinxcontrib-httpdomain = callPackage ../development/python-modules/sphinxcontrib-httpdomain { };
 
+  sphinxcontrib-jinjadomain = callPackage ../development/python-modules/sphinxcontrib-jinjadomain { };
+
   sphinxcontrib-jquery = callPackage ../development/python-modules/sphinxcontrib-jquery { };
 
   sphinxcontrib-jsmath = callPackage ../development/python-modules/sphinxcontrib-jsmath { };
@@ -17416,6 +17428,8 @@ self: super: with self; {
 
   typogrify = callPackage ../development/python-modules/typogrify { };
 
+  typst = callPackage ../development/python-modules/typst { };
+
   tzdata = callPackage ../development/python-modules/tzdata { };
 
   tzlocal = callPackage ../development/python-modules/tzlocal { };
@@ -17771,6 +17785,8 @@ self: super: with self; {
   virt-firmware = callPackage ../development/python-modules/virt-firmware { };
 
   virtkey = callPackage ../development/python-modules/virtkey { };
+
+  virtual-glob = callPackage ../development/python-modules/virtual-glob { };
 
   virtualenv = callPackage ../development/python-modules/virtualenv { };
 
