@@ -267,6 +267,7 @@
   ./programs/ns-usbloader.nix
   ./programs/oblogout.nix
   ./programs/oddjobd.nix
+  ./programs/opengamepadui.nix
   ./programs/openvpn3.nix
   ./programs/obs-studio.nix
   ./programs/partition-manager.nix
@@ -631,6 +632,7 @@
   ./services/hardware/pcscd.nix
   ./services/hardware/pommed.nix
   ./services/hardware/power-profiles-daemon.nix
+  ./services/hardware/powerstation.nix
   ./services/hardware/rasdaemon.nix
   ./services/hardware/ratbagd.nix
   ./services/hardware/sane.nix
