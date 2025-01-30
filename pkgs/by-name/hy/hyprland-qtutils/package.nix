@@ -13,13 +13,13 @@ let
 in
 gcc14Stdenv.mkDerivation (finalAttrs: {
   pname = "hyprland-qtutils";
-  version = "0.1.2";
+  version = "0.1.3";
 
   src = fetchFromGitHub {
     owner = "hyprwm";
     repo = "hyprland-qtutils";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-FxbuGQExtN37ToWYnGmO6weOYN6WPHN/RAqbr7gNPek=";
+    hash = "sha256-9m/Ha7hrxtbBl4UylZTYzTT/8a6Sy5DvTmBJrcQ6FwQ=";
   };
 
   nativeBuildInputs = [
@@ -43,7 +43,7 @@ gcc14Stdenv.mkDerivation (finalAttrs: {
     description = "Hyprland QT/qml utility apps";
     homepage = "https://github.com/hyprwm/hyprland-qtutils";
     license = lib.licenses.bsd3;
-    maintainers = [ lib.maintainers.fufexan ];
+    maintainers = lib.teams.hyprland.members;
     platforms = lib.platforms.linux;
   };
 })
