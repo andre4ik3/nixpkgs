@@ -23,18 +23,19 @@ let
     ];
 in
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "bacon";
-  version = "3.9.1";
+  version = "3.11.0";
 
   src = fetchFromGitHub {
     owner = "Canop";
     repo = "bacon";
-    tag = "v${version}";
-    hash = "sha256-TniEPcY3mK5LO9CBXi5kgnUQkOeDwF9n1K0kSn4ucKk=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-yFU4U1TWoumg61Vs6F5Gqz22VuI2Qs0IRz/TPGBYX4E=";
   };
 
-  cargoHash = "sha256-5pY43PH2I4L/QsNnJffBGiRtuZrnLVCxjo0YseLsEMc=";
+  useFetchCargoVendor = true;
+  cargoHash = "sha256-g8DWFhgguxPked7kCCsmUPXzRqu5DaPopoxORBl4/1o=";
 
   buildFeatures = lib.optionals withSound [
     "sound"
@@ -61,11 +62,11 @@ rustPlatform.buildRustPackage rec {
     description = "Background rust code checker";
     mainProgram = "bacon";
     homepage = "https://github.com/Canop/bacon";
-    changelog = "https://github.com/Canop/bacon/blob/v${version}/CHANGELOG.md";
+    changelog = "https://github.com/Canop/bacon/blob/v${finalAttrs.version}/CHANGELOG.md";
     license = lib.licenses.agpl3Only;
     maintainers = with lib.maintainers; [
       FlorianFranzen
       matthiasbeyer
     ];
   };
-}
+})

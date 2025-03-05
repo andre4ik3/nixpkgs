@@ -847,11 +847,7 @@ in
         { source = config.isoImage.splashImage;
           target = "/isolinux/background.png";
         }
-        { source = pkgs.substituteAll  {
-            name = "isolinux.cfg";
-            src = pkgs.writeText "isolinux.cfg-in" isolinuxCfg;
-            bootRoot = "/boot";
-          };
+        { source = pkgs.writeText "isolinux.cfg" isolinuxCfg;
           target = "/isolinux/isolinux.cfg";
         }
         { source = "${pkgs.syslinux}/share/syslinux";

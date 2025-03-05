@@ -1,6 +1,6 @@
 { lib
 , copyDesktopItems
-, electron_32
+, electron_34
 , fetchFromGitHub
 , deltachat-rpc-server
 , makeDesktopItem
@@ -19,36 +19,36 @@
 
 let
   deltachat-rpc-server' = deltachat-rpc-server.overrideAttrs rec {
-    version = "1.154.3";
+    version = "1.155.5";
     src = fetchFromGitHub {
       owner = "deltachat";
       repo = "deltachat-core-rust";
       tag = "v${version}";
-      hash = "sha256-SjNFgvg6sHW40v13OuR3BL3+JdDxntDCKtbe/C/04as=";
+      hash = "sha256-U0phIPkR4lt/WsCDt2TQv8NfjG04JdmCVDbMA1/ySdo=";
     };
     cargoDeps = rustPlatform.fetchCargoVendor {
       pname = "deltachat-core-rust";
       inherit version src;
-      hash = "sha256-kbSRGuyCJlTxzKr/C+MLczqT7WNTqZ2/Z42psbBFW+w=";
+      hash = "sha256-lkqBC/b128GSMpvAWpWmkrrf/E0twCDtDM1EBPOnp7Y=";
     };
   };
-  electron = electron_32;
+  electron = electron_34;
   pnpm = pnpm_9;
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "deltachat-desktop";
-  version = "1.52.0";
+  version = "1.54.1";
 
   src = fetchFromGitHub {
     owner = "deltachat";
     repo = "deltachat-desktop";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-yKIGgeUjfpw0MMCnrD2TYrACfb/V6681IukZZY8feZc=";
+    hash = "sha256-mt0y7W16ThRYQNALFPBNcnR34MDqs6m3Vt+mYALqGs8=";
   };
 
   pnpmDeps = pnpm.fetchDeps {
     inherit (finalAttrs) pname version src;
-    hash = "sha256-YgHJN0LNgXoDCLqOw891CD23kpQ0wCnKFp5WccTHHw8=";
+    hash = "sha256-/1utoiKw/BycWPuwWykcJniUw9kUGk/WtPCqqZu8E+U=";
   };
 
   nativeBuildInputs = [
