@@ -16,11 +16,16 @@ let
       image,
       params,
       initrd,
+      deviceTree ? null,
     }:
     ''
       menuentry '${name}' --class ${class} {
         # Fallback to UEFI console for boot, efifb sometimes has difficulties.
         terminal_output console
+
+        ${lib.optionalString (deviceTree != null) ''
+          devicetree ${deviceTree}
+        ''}
 
         linux ${image} \''${isoboot} ${params}
         initrd ${initrd}
@@ -47,6 +52,7 @@ let
         image = "/boot/${cfg.boot.kernelPackages.kernel + "/" + cfg.system.boot.loader.kernelFile}";
         initrd = "/boot/${cfg.system.build.initialRamdisk + "/" + cfg.system.boot.loader.initrdFile}";
         class = "installer";
+        deviceTree = if cfg.hardware.deviceTree.enable then "/devicetree.dtb" else null;
       };
     in
     ''
@@ -932,6 +938,12 @@ in
         }
       ]
       ++ lib.unique (cfgFiles config)
+      ++ lib.optionals config.hardware.deviceTree.enable [
+        {
+          source = "${config.hardware.deviceTree.package}/${config.hardware.deviceTree.name}";
+          target = "/devicetree.dtb";
+        }
+      ]
       ++ lib.optionals (config.isoImage.makeBiosBootable) [
         {
           source = config.isoImage.splashImage;
