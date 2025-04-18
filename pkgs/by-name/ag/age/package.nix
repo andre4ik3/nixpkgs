@@ -3,6 +3,7 @@
   buildGoModule,
   fetchFromGitHub,
   installShellFiles,
+  age-plugin-se,
   age-plugin-tpm,
   age-plugin-sss,
   age-plugin-ledger,
@@ -58,6 +59,7 @@ buildGoModule (final: {
   # group age plugins together
   passthru.plugins = {
     inherit
+      age-plugin-se
       age-plugin-tpm
       age-plugin-sss
       age-plugin-ledger
