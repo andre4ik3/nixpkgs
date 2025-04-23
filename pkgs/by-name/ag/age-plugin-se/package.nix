@@ -5,11 +5,14 @@
   swift,
   swiftpm,
   nix-update-script,
+  swiftpm2nix,
 }:
+
 let
-  inherit (swiftPackages) stdenv;
+  generated = swiftpm2nix.helpers ./generated;
 in
-stdenv.mkDerivation (finalAttrs: {
+
+swiftPackages.stdenv.mkDerivation (finalAttrs: {
   pname = "age-plugin-se";
   version = "0.1.4";
 
@@ -25,22 +28,7 @@ stdenv.mkDerivation (finalAttrs: {
     swiftpm
   ];
 
-  postPatch =
-    let
-      swift-crypto = fetchFromGitHub {
-        owner = "apple";
-        repo = "swift-crypto";
-        # FIXME: Update to a newer version once https://github.com/NixOS/nixpkgs/issues/343210 is fixed
-        # This is the last version to support swift tools 5.8 which is newest version supported by nixpkgs:
-        # https://github.com/apple/swift-crypto/commit/35703579f63c2518fc929a1ce49805ba6134137c
-        tag = "3.7.1";
-        hash = "sha256-zxmHxTryAezgqU5qjXlFFThJlfUsPxb1KRBan4DSm9A=";
-      };
-    in
-    ''
-      ln -s ${swift-crypto} swift-crypto
-      substituteInPlace Package.swift --replace-fail 'url: "https://github.com/apple/swift-crypto.git"' 'path: "./swift-crypto"), //'
-    '';
+  configurePhase = generated.configure;
 
   makeFlags = [
     "PREFIX=$(out)"
@@ -58,6 +46,6 @@ stdenv.mkDerivation (finalAttrs: {
       remko
     ];
     mainProgram = "age-plugin-se";
-    platforms = lib.platforms.darwin;
+    platforms = lib.platforms.unix;
   };
 })
