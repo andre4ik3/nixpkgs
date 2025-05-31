@@ -5,7 +5,7 @@
 }:
 
 buildGoModule rec {
-  pname = "pcp";
+  pname = "peercp";
   version = "0.4.0";
 
   src = fetchFromGitHub {
