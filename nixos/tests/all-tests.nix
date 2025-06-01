@@ -1033,6 +1033,7 @@ in
   paperless = runTest ./paperless.nix;
   parsedmarc = handleTest ./parsedmarc { };
   password-option-override-ordering = runTest ./password-option-override-ordering.nix;
+  pcp = runTest ./pcp.nix;
   pdns-recursor = runTest ./pdns-recursor.nix;
   pds = runTest ./pds.nix;
   peerflix = runTest ./peerflix.nix;
