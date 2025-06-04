@@ -1,7 +1,7 @@
 From 7b307395f02c5af35283eb19af4b4f7b345e5b72 Mon Sep 17 00:00:00 2001
 From: andre4ik3 <andre4ik3@fastmail.com>
 Date: Sun, 1 Jun 2025 02:49:52 +0400
-Subject: [PATCH 2/4] Move pmlogctl lockfile to /run/pcp
+Subject: [PATCH 2/6] Move pmlogctl lockfile to /run/pcp
 
 ---
  src/pmlogctl/pmlogctl.sh | 42 ++++++++++++++++++++--------------------

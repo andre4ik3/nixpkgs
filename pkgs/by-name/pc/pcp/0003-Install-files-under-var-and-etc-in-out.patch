@@ -1,7 +1,7 @@
 From d18f59967f739ce2bdebb89fdf8496d7e3faaa8a Mon Sep 17 00:00:00 2001
 From: andre4ik3 <andre4ik3@fastmail.com>
 Date: Sun, 1 Jun 2025 02:51:31 +0400
-Subject: [PATCH 3/4] Install files under `/var` and `/etc` in $out
+Subject: [PATCH 3/6] Install files under `/var` and `/etc` in $out
 
 ---
  install-sh | 36 ++++++++++++++++++++++++++----------
