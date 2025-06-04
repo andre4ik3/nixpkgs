@@ -1,7 +1,7 @@
 From 61768cef70749c259bd1e722a9b91a99d4e748e3 Mon Sep 17 00:00:00 2001
 From: andre4ik3 <andre4ik3@fastmail.com>
 Date: Sun, 1 Jun 2025 19:09:27 +0400
-Subject: [PATCH 4/4] Replace `find_library` with variables for library paths
+Subject: [PATCH 4/6] Replace `find_library` with variables for library paths
 
 ---
  src/python/pcp/mmv.py      | 2 +-

@@ -41,29 +41,66 @@
 
   # Python PMDAs, API, dstat, pcp ps, etc.
   withPython ? true,
-  python3Packages,
-  makeWrapper,
+  python3 ? null,
 
   # Perl PMDAs
   withPerl ? true,
-  perlPackages,
+  perl ? null,
 
   # pmchart, pmgadgets, etc
   withQt ? true,
-  kdePackages,
+  libsForQt5 ? null, # Qt6 works also, but not for SoQt (pmview)
+  coin3d ? null,
 
   nixosTests,
 }:
 
+let
+  pythonDeps = scopedPkgs: with scopedPkgs; [
+    # To build Python API
+    setuptools
+
+    # So PCP can find itself
+    # TODO: breaks
+    # (placeholder "out")
+
+    openpyxl # pcp2xlsx
+    pyarrow # pcp2arrow
+    setuptools
+
+    requests # InfluxDB support
+    six # json
+    jsonpointer # json
+    bcc # bcc TODO -- nixpkgs package doesn't have the library?
+    libvirt # libvirt
+    lxml # libvirt
+    psycopg2 # postgresql
+    pymongo # mongodb
+    rtslib-fb # LIO
+
+    # mssql (SQL Server) PMDA -- Upgrade script looks for perl
+  ] ++ (lib.optional withPerl pyodbc);
+
+  perlDeps = scopedPkgs: with scopedPkgs; [
+    NetSNMP # SNMP
+    DBI # oracle, mysql
+    DBDmysql # mysql
+    LWP # nginx, activemg
+  ];
+
+  wrappedPython = python3.withPackages pythonDeps;
+  wrappedPerl = perl.withPackages perlDeps;
+in
+
 stdenv.mkDerivation (finalAttrs: {
   pname = "pcp";
-  version = "6.3.7";
+  version = "6.3.8";
 
   src = fetchFromGitHub {
     owner = "performancecopilot";
     repo = "pcp";
     tag = finalAttrs.version;
-    hash = "sha256-fXI9R7pWxs33uS8E+tgzJzhY8tBpoD66jNuSPisJfHE=";
+    hash = "sha256-iSE+VP7UfpKrWONdkrgVX/HLTHzChpCH/2JSsm+O9eo=";
   };
 
   patches = [
@@ -71,6 +108,9 @@ stdenv.mkDerivation (finalAttrs: {
     ./0002-Move-pmlogctl-lockfile-to-run-pcp.patch
     ./0003-Install-files-under-var-and-etc-in-out.patch
     ./0004-Replace-find_library-with-variables-for-library-path.patch
+    ./0005-Find-SoQt-using-pkg-config.patch
+    ./0006-pmview-install-desktop-files.patch
+    ./no-etc-writes.patch
   ];
 
   # Remove a few hardcoded references to FHS paths in the build and install process
@@ -92,14 +132,16 @@ stdenv.mkDerivation (finalAttrs: {
       src/pmdas/linux/add_{snmp,netstat}_field src/libpcp/src/check-errorcodes \
       --replace-quiet "tmp=/var/tmp" "tmp=/tmp"
 
-    # Replace Python C library placeholders with their full paths
-    substituteInPlace src/python/pcp/{mmv.py,pmapi.py.in,pmda.py,pmgui.py,pmi.py} \
-      --subst-var-by c ${stdenv.cc.libc}/lib/libc.so.6 \
-      --subst-var-by pcp $out/lib/libpcp.so \
-      --subst-var-by pcp_mmv $out/lib/libpcp_mmv.so \
-      --subst-var-by pcp_pmda $out/lib/libpcp_pmda.so \
-      --subst-var-by pcp_gui $out/lib/libpcp_gui.so \
-      --subst-var-by pcp_import $out/lib/libpcp_import.so
+    ${lib.optionalString withPython ''
+      # Replace Python C library placeholders with their full paths
+      substituteInPlace src/python/pcp/{mmv.py,pmapi.py.in,pmda.py,pmgui.py,pmi.py} \
+        --subst-var-by c ${stdenv.cc.libc}/lib/libc.so.6 \
+        --subst-var-by pcp $out/lib/libpcp.so \
+        --subst-var-by pcp_mmv $out/lib/libpcp_mmv.so \
+        --subst-var-by pcp_pmda $out/lib/libpcp_pmda.so \
+        --subst-var-by pcp_gui $out/lib/libpcp_gui.so \
+        --subst-var-by pcp_import $out/lib/libpcp_import.so
+    ''}
   '';
 
   preConfigure = ''
@@ -123,7 +165,7 @@ stdenv.mkDerivation (finalAttrs: {
   ] ++ lib.optionals stdenv.hostPlatform.isLinux [
     clang # bpf
     libllvm # bpf -- for llvm-strip command
-  ] ++ lib.optional withQt kdePackages.wrapQtAppsHook;
+  ] ++ lib.optional withQt libsForQt5.wrapQtAppsHook;
 
   # needed to compile BPF
   hardeningDisable = lib.optional stdenv.hostPlatform.isLinux "zerocallusedregs";
@@ -156,41 +198,18 @@ stdenv.mkDerivation (finalAttrs: {
       systemd # systemd
     ])
 
-    (lib.optionals withPython (with python3Packages; [
-      # To wrap pmpython
-      makeWrapper
+    (lib.optionals withPython [ python3 ] ++ (pythonDeps python3.pkgs))
 
-      openpyxl
-      pyarrow
-      setuptools
+    # Without base perl it complains about `crypto.h`
+    (lib.optionals withPerl [ perl ] ++ (perlDeps perl.pkgs))
 
-      requests # InfluxDB support
-      six # json
-      jsonpointer # json
-      bcc # bcc TODO -- nixpkgs package doesn't have the library?
-      libvirt # libvirt
-      lxml # libvirt
-      psycopg2 # postgresql
-      pymongo # mongodb
-      rtslib-fb # LIO
-    ]))
-
-    (lib.optionals withPerl (with perlPackages; [
-      perl
-      NetSNMP # SNMP
-      DBI # oracle, mysql
-      DBDmysql # mysql
-      LWP # nginx, activemg
-    ]))
-
-    # mssql (SQL Server) PMDA -- Upgrade script looks for perl
-    (lib.optional (withPython && withPerl) python3Packages.pyodbc)
-
-    # pmchart, pmgadgets, etc
-    (lib.optionals withQt (with kdePackages; [
+    # pmchart, pmgadgets, pmview, etc
+    (lib.optionals withQt (with libsForQt5; [
       qtbase
       qtsvg
       qt3d
+      soqt
+      coin3d
     ]))
   ];
 
@@ -208,18 +227,28 @@ stdenv.mkDerivation (finalAttrs: {
   postFixup = ''
     ${lib.optionalString withPython ''
       wrapProgram $out/bin/pmpython \
-        --prefix PYTHONPATH : ${lib.makeSearchPath python3Packages.python.sitePackages ["$out"]}
+        --prefix PYTHONPATH : $out/${python3.sitePackages}
     ''}
 
     ${lib.optionalString withQt ''
-      for program in "pmchart" "pmquery" "pmtime" "pmdumptext"; do
-        wrapQtApp $out/bin/$program
+      for program in "pmchart" "pmview" "pmquery" "pmtime" "pmdumptext"; do
+        if [ -x $out/bin/$program ]; then
+          wrapQtApp $out/bin/$program
+        fi
       done
+
+      mkdir -p $out/share/icons/hicolor/48x48
+      ln -s $out/share/pcp-gui/pixmaps $out/share/icons/hicolor/48x48/apps
     ''}
   '';
 
   passthru = {
     tests = { inherit (nixosTests) pcp; };
+  } // lib.optionalAttrs withPython {
+    python = python3;
+    inherit pythonDeps;
+  } // lib.optionalAttrs withPerl {
+    inherit perl perlDeps;
   };
 
   meta = {
