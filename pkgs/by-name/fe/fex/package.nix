@@ -5,12 +5,12 @@
   cmake,
   ninja,
   pkg-config,
-  qt5,
   python3,
   nix-update-script,
   xxHash,
   fmt,
   nasm,
+  withThunks ? true,
   buildEnv,
   writeText,
   pkgsCross,
@@ -21,6 +21,8 @@
   libGL,
   wayland,
   xorg,
+  withQt ? true,
+  qt6,
 }:
 
 let
@@ -160,7 +162,6 @@ llvmPackages.stdenv.mkDerivation (finalAttrs: {
     cmake
     ninja
     pkg-config
-    qt5.wrapQtAppsHook
     llvmPackages.bintools
 
     (python3.withPackages (
@@ -169,7 +170,8 @@ llvmPackages.stdenv.mkDerivation (finalAttrs: {
         libclang
       ]
     ))
-  ];
+  ]
+  ++ lib.optional withQt qt6.wrapQtAppsHook;
 
   nativeCheckInputs = [ nasm ];
 
@@ -181,13 +183,11 @@ llvmPackages.stdenv.mkDerivation (finalAttrs: {
     libclang
     libllvm
   ]
-  ++ libForwardingInputs
-  ++ (with qt5; [
-    qtbase
-    qtdeclarative
-    qtquickcontrols
-    qtquickcontrols2
-  ]);
+  ++ lib.optionals withThunks libForwardingInputs
+  ++ lib.optionals withQt [
+    qt6.qtbase
+    qt6.qtdeclarative
+  ];
 
   cmakeFlags = [
     (lib.cmakeFeature "USE_LINKER" "lld")
@@ -195,6 +195,9 @@ llvmPackages.stdenv.mkDerivation (finalAttrs: {
     (lib.cmakeBool "ENABLE_ASSERTIONS" false)
     (lib.cmakeFeature "OVERRIDE_VERSION" finalAttrs.version)
     (lib.cmakeBool "BUILD_TESTS" finalAttrs.finalPackage.doCheck)
+    (lib.cmakeBool "BUILD_FEXCONFIG" withQt)
+  ]
+  ++ lib.optionals withThunks [
     (lib.cmakeBool "BUILD_THUNKS" true)
     (lib.cmakeFeature "X86_32_TOOLCHAIN_FILE" "${toolchain32}")
     (lib.cmakeFeature "X86_64_TOOLCHAIN_FILE" "${toolchain}")
@@ -218,7 +221,7 @@ llvmPackages.stdenv.mkDerivation (finalAttrs: {
   # Avoid wrapping anything other than FEXConfig, since the wrapped executables
   # don't seem to work when registered as binfmts.
   dontWrapQtApps = true;
-  preFixup = ''
+  preFixup = lib.optionalString withQt ''
     wrapQtApp $out/bin/FEXConfig
   '';
 
