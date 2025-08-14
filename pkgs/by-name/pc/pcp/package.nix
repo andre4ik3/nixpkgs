@@ -40,22 +40,30 @@
   bpftools ? null, # TODO move somewhere more appropriate
 
   # Python PMDAs, API, dstat, pcp ps, etc.
-  withPython ? true,
+  withPython ? false,
   python3 ? null,
 
   # Perl PMDAs
-  withPerl ? true,
+  withPerl ? false,
   perl ? null,
 
   # pmchart, pmgadgets, etc
-  withQt ? true,
-  libsForQt5 ? null, # Qt6 works also, but not for SoQt (pmview)
-  coin3d ? null,
+  withQt ? false,
+  qtPackages ? kdePackages,
+  kdePackages ? null, # Qt6 works also, but not for SoQt (pmview)
+
+  # TODO darwin stuffs
+  cctools,
+  libtool,
+  gettext,
 
   nixosTests,
+  llvmPackages_20,
 }:
 
 let
+  inherit (stdenv.hostPlatform) isDarwin isLinux;
+
   pythonDeps = scopedPkgs: with scopedPkgs; [
     # To build Python API
     setuptools
@@ -71,15 +79,17 @@ let
     requests # InfluxDB support
     six # json
     jsonpointer # json
-    bcc # bcc TODO -- nixpkgs package doesn't have the library?
     libvirt # libvirt
     lxml # libvirt
     psycopg2 # postgresql
     pymongo # mongodb
+  ]
+  ++ lib.optionals isLinux [
+    bcc # bcc TODO -- nixpkgs package doesn't have the library?
     rtslib-fb # LIO
-
-    # mssql (SQL Server) PMDA -- Upgrade script looks for perl
-  ] ++ (lib.optional withPerl pyodbc);
+  ]
+  # mssql (SQL Server) PMDA -- Upgrade script looks for perl
+  ++ lib.optional withPerl pyodbc;
 
   perlDeps = scopedPkgs: with scopedPkgs; [
     NetSNMP # SNMP
@@ -92,7 +102,8 @@ let
   wrappedPerl = perl.withPackages perlDeps;
 in
 
-stdenv.mkDerivation (finalAttrs: {
+# stdenv.mkDerivation (finalAttrs: {
+llvmPackages_20.stdenv.mkDerivation (finalAttrs: {
   pname = "pcp";
   version = "6.3.8";
 
@@ -145,10 +156,15 @@ stdenv.mkDerivation (finalAttrs: {
   '';
 
   preConfigure = ''
-    export AR=$(which gcc-ar)
-    export SYSTEMD_TMPFILESDIR="$out/lib/tmpfiles.d"
-    export SYSTEMD_SYSUSERSDIR="$out/lib/sysusers.d"
-    export SYSTEMD_SYSTEMUNITDIR="$out/lib/systemd/system"
+    ${lib.optionalString isLinux ''
+      export AR=$(which gcc-ar)
+      export SYSTEMD_TMPFILESDIR="$out/lib/tmpfiles.d"
+      export SYSTEMD_SYSUSERSDIR="$out/lib/sysusers.d"
+      export SYSTEMD_SYSTEMUNITDIR="$out/lib/systemd/system"
+    ''}
+    ${lib.optionalString isDarwin ''
+      export AR=$(which ar)
+    ''}
   '';
 
   configureFlags = [
@@ -158,14 +174,21 @@ stdenv.mkDerivation (finalAttrs: {
   ];
 
   nativeBuildInputs = [
-    autoreconfHook
+    (autoreconfHook.override { libtool = cctools; })
     pkg-config
     bison
     flex
-  ] ++ lib.optionals stdenv.hostPlatform.isLinux [
+  ]
+  ++ lib.optionals isLinux [
     clang # bpf
     libllvm # bpf -- for llvm-strip command
-  ] ++ lib.optional withQt libsForQt5.wrapQtAppsHook;
+  ]
+  ++ lib.optionals isDarwin [
+    # TODO
+    cctools
+    libtool
+  ]
+  ++ lib.optional withQt qtPackages.wrapQtAppsHook;
 
   # needed to compile BPF
   hardeningDisable = lib.optional stdenv.hostPlatform.isLinux "zerocallusedregs";
@@ -188,7 +211,7 @@ stdenv.mkDerivation (finalAttrs: {
       # TODO: postfix? -- needs qshape
     ]
 
-    (lib.optionals stdenv.hostPlatform.isLinux [
+    (lib.optionals isLinux [
       avahi
 
       libbpf # bpf
@@ -204,12 +227,10 @@ stdenv.mkDerivation (finalAttrs: {
     (lib.optionals withPerl [ perl ] ++ (perlDeps perl.pkgs))
 
     # pmchart, pmgadgets, pmview, etc
-    (lib.optionals withQt (with libsForQt5; [
+    (lib.optionals withQt (with qtPackages; [
       qtbase
       qtsvg
       qt3d
-      soqt
-      coin3d
     ]))
   ];
 
