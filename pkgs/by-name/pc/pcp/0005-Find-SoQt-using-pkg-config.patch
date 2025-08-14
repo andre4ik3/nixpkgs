@@ -1,7 +1,7 @@
-From e04a5a02200db09c95672192c9da5be0e8d6394d Mon Sep 17 00:00:00 2001
+From 3447c0275a185f86d3f539e247354fd50a6be5dd Mon Sep 17 00:00:00 2001
 From: andre4ik3 <andre4ik3@fastmail.com>
 Date: Tue, 3 Jun 2025 12:03:10 +0400
-Subject: [PATCH 5/6] Find SoQt using pkg-config
+Subject: [PATCH 5/8] Find SoQt using pkg-config
 
 ---
  configure.ac | 14 ++++++++++----
@@ -35,5 +35,5 @@ index e204a80cb..19c0f793e 100644
  ])
  AC_SUBST(enable_qt3d)
 -- 
-2.49.0
+2.50.1
 

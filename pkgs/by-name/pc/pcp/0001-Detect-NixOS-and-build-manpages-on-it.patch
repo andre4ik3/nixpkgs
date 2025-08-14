@@ -1,7 +1,7 @@
-From 7bd00f389a1bf8e87d3ab24a1631f0b1bf646842 Mon Sep 17 00:00:00 2001
+From 98c7294e4dc72527cbd0a77cd9dda8a1acb8d0ae Mon Sep 17 00:00:00 2001
 From: andre4ik3 <andre4ik3@fastmail.com>
 Date: Sun, 1 Jun 2025 02:48:54 +0400
-Subject: [PATCH 1/6] Detect NixOS and build manpages on it
+Subject: [PATCH 1/8] Detect NixOS and build manpages on it
 
 ---
  configure.ac | 14 +++++++++++++-
@@ -41,5 +41,5 @@ index 2d0675a1d..e204a80cb 100644
  fi
  
 -- 
-2.49.0
+2.50.1
 

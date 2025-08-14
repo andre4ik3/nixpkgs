@@ -1,0 +1,107 @@
+diff --git a/Libraries/process/Sources/DefaultUser.cpp b/Libraries/process/Sources/DefaultUser.cpp
+index 54e464e0..89188351 100644
+--- a/Libraries/process/Sources/DefaultUser.cpp
++++ b/Libraries/process/Sources/DefaultUser.cpp
+@@ -82,6 +82,7 @@ CreateToken(TOKEN_INFORMATION_CLASS type)
+ std::string const &DefaultUser::
+ userID() const
+ {
++    fprintf(stderr, "Getting user ID\n");
+     static std::string const *userID = nullptr;
+ 
+     static std::once_flag flag;
+@@ -109,12 +110,14 @@ userID() const
+ #endif
+     });
+ 
++    fprintf(stderr, "Returning dereferencing user ID\n");
+     return *userID;
+ }
+ 
+ std::string const &DefaultUser::
+ groupID() const
+ {
++    fprintf(stderr, "Getting group ID\n");
+     static std::string const *groupID = nullptr;
+ 
+     static std::once_flag flag;
+@@ -142,12 +145,14 @@ groupID() const
+ #endif
+     });
+ 
++    fprintf(stderr, "Returning dereferencing group ID\n");
+     return *groupID;
+ }
+ 
+ std::string const &DefaultUser::
+ userName() const
+ {
++    fprintf(stderr, "Getting user name\n");
+     static std::string const *userName = nullptr;
+ 
+     static std::once_flag flag;
+@@ -179,11 +184,13 @@ userName() const
+ #else
+         if (struct passwd const *pw = ::getpwuid(::getuid())) {
+             if (pw->pw_name != nullptr) {
++                fprintf(stderr, "User name from getpwuid\n");
+                 userName = new std::string(pw->pw_name);
+             }
+         }
+ 
+         if (userName == nullptr) {
++            fprintf(stderr, "It was null, trying getuid\n");
+             std::ostringstream os;
+             os << ::getuid();
+             userName = new std::string(os.str());
+@@ -191,12 +198,14 @@ userName() const
+ #endif
+     });
+ 
++    fprintf(stderr, "Returning dereferencing user name\n");
+     return *userName;
+ }
+ 
+ std::string const &DefaultUser::
+ groupName() const
+ {
++    fprintf(stderr, "Getting group name\n");
+     static std::string const *groupName = nullptr;
+ 
+     static std::once_flag flag;
+@@ -228,11 +237,13 @@ groupName() const
+ #else
+         if (struct group const *gr = ::getgrgid(::getgid())) {
+             if (gr->gr_name != nullptr) {
++                fprintf(stderr, "Group name from getgrgid\n");
+                 groupName = new std::string(gr->gr_name);
+             }
+         }
+ 
+         if (groupName == nullptr) {
++            fprintf(stderr, "It was null, trying getgid\n");
+             std::ostringstream os;
+             os << ::getgid();
+             groupName = new std::string(os.str());
+@@ -240,6 +251,7 @@ groupName() const
+ #endif
+     });
+ 
++    fprintf(stderr, "Returning dereferencing group name\n");
+     return *groupName;
+ }
+ 
+@@ -269,10 +281,13 @@ userHomeDirectory() const
+     CloseHandle(process);
+     return WideStringToString(buffer);
+ #else
++    fprintf(stderr, "Getting home directory\n");
+     char *home = ::getpwuid(::getuid())->pw_dir;
+     if (home != nullptr) {
++        fprintf(stderr, "Returning home directory\n");
+         return std::string(home);
+     } else {
++        fprintf(stderr, "Returning null\n");
+         return ext::nullopt;
+     }
+ #endif

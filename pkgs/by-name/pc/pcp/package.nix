@@ -18,10 +18,7 @@
   openssl,
   cyrus_sasl,
 
-  # Zeroconf/discovery
-  avahi ? null,
-
-  # Web
+  # Web TODO
   libuv,
   zlib,
 
@@ -29,48 +26,50 @@
   readline,
   ncurses,
 
-  # Linux PMDAs
-  libbpf ? null,
-  libelf ? null,
-  clang ? null,
-  libllvm ? null,
-  bpftrace ? null,
-  libpfm ? null,
-  systemd ? null,
-  bpftools ? null, # TODO move somewhere more appropriate
+  # Linux PMDAs and support
+  avahi, # zeroconf
+  libbpf,
+  libelf,
+  clang,
+  libllvm,
+  bpftrace,
+  libpfm,
+  systemd,
+  bpftools, # TODO move somewhere more appropriate
+
+  # Darwin PMDAs and support
+  fixDarwinDylibNames,
+  apple-sdk_14,
+  cctools,
+  clang_20,
 
   # Python PMDAs, API, dstat, pcp ps, etc.
-  withPython ? false,
-  python3 ? null,
+  withPython ? true,
+  python3,
+  makeWrapper,
 
   # Perl PMDAs
   withPerl ? false,
-  perl ? null,
+  perl,
 
   # pmchart, pmgadgets, etc
-  withQt ? false,
+  withQt ? true,
   qtPackages ? kdePackages,
-  kdePackages ? null, # Qt6 works also, but not for SoQt (pmview)
-
-  # TODO darwin stuffs
-  cctools,
-  libtool,
-  gettext,
+  kdePackages,
 
   nixosTests,
-  llvmPackages_20,
 }:
 
 let
   inherit (stdenv.hostPlatform) isDarwin isLinux;
+  libExt = stdenv.hostPlatform.extensions.sharedLibrary;
+
+  # TODO: proper way to get libc path?
+  libc = if isDarwin then "/usr/lib/libSystem.B.dylib" else "${stdenv.cc.libc}/lib/libc.so.6";
 
   pythonDeps = scopedPkgs: with scopedPkgs; [
     # To build Python API
     setuptools
-
-    # So PCP can find itself
-    # TODO: breaks
-    # (placeholder "out")
 
     openpyxl # pcp2xlsx
     pyarrow # pcp2arrow
@@ -100,12 +99,35 @@ let
 
   wrappedPython = python3.withPackages pythonDeps;
   wrappedPerl = perl.withPackages perlDeps;
+
+  # Maps the name of a PCP Qt program to a shell expression for its path.
+  getGuiExe = name: if isDarwin
+    then "$out/Applications/${name}.app/Contents/MacOS/${name}"
+    else "$out/bin/${name}";
+
+  # List of all Qt programs in PCP.
+  guiExes = lib.map getGuiExe [
+    "pmchart"
+    "pmview"
+    "pmquery"
+    "pmtime"
+    "pmdumptext"
+  ];
 in
 
-# stdenv.mkDerivation (finalAttrs: {
-llvmPackages_20.stdenv.mkDerivation (finalAttrs: {
+stdenv.mkDerivation (finalAttrs: {
   pname = "pcp";
   version = "6.3.8";
+
+  outputs = [
+    # TODO: something something cycle detected on Darwin
+    # error: cycle detected in build of '/nix/store/m88y7a50frbaqdrqa0p4kvjaa79nkfig-pcp-6.3.8.drv' in the references of output 'dev' from output 'out'
+    # like what does that even mean and why does it only happen on Darwin??
+    # "doc"
+    # "man"
+    "out"
+    # "dev"
+  ];
 
   src = fetchFromGitHub {
     owner = "performancecopilot";
@@ -119,9 +141,15 @@ llvmPackages_20.stdenv.mkDerivation (finalAttrs: {
     ./0002-Move-pmlogctl-lockfile-to-run-pcp.patch
     ./0003-Install-files-under-var-and-etc-in-out.patch
     ./0004-Replace-find_library-with-variables-for-library-path.patch
+
+    # pmview has been disabled by default upstream, these patches reenable it
+    # note that pmview requires SoQt, which is Qt5-only
     ./0005-Find-SoQt-using-pkg-config.patch
     ./0006-pmview-install-desktop-files.patch
-    ./no-etc-writes.patch
+
+    # Fixes for building on macOS
+    ./0007-Handle-modern-macOS.patch
+    ./0008-Install-macOS-applications-to-bin-dir.patch
   ];
 
   # Remove a few hardcoded references to FHS paths in the build and install process
@@ -145,36 +173,38 @@ llvmPackages_20.stdenv.mkDerivation (finalAttrs: {
 
     ${lib.optionalString withPython ''
       # Replace Python C library placeholders with their full paths
-      substituteInPlace src/python/pcp/{mmv.py,pmapi.py.in,pmda.py,pmgui.py,pmi.py} \
-        --subst-var-by c ${stdenv.cc.libc}/lib/libc.so.6 \
-        --subst-var-by pcp $out/lib/libpcp.so \
-        --subst-var-by pcp_mmv $out/lib/libpcp_mmv.so \
-        --subst-var-by pcp_pmda $out/lib/libpcp_pmda.so \
-        --subst-var-by pcp_gui $out/lib/libpcp_gui.so \
-        --subst-var-by pcp_import $out/lib/libpcp_import.so
+      substituteInPlace src/python/pcp/{{mmv,pmda,pmgui,pmi}.py,pmapi.py.in} \
+        --subst-var-by c "${libc}" \
+        --subst-var-by pcp "$out/lib/libpcp${libExt}" \
+        --subst-var-by pcp_mmv "$out/lib/libpcp_mmv${libExt}" \
+        --subst-var-by pcp_pmda "$out/lib/libpcp_pmda${libExt}" \
+        --subst-var-by pcp_gui "$out/lib/libpcp_gui${libExt}" \
+        --subst-var-by pcp_import "$out/lib/libpcp_import${libExt}"
     ''}
   '';
 
   preConfigure = ''
+    export AR="$(which ar)"
     ${lib.optionalString isLinux ''
-      export AR=$(which gcc-ar)
       export SYSTEMD_TMPFILESDIR="$out/lib/tmpfiles.d"
       export SYSTEMD_SYSUSERSDIR="$out/lib/sysusers.d"
       export SYSTEMD_SYSTEMUNITDIR="$out/lib/systemd/system"
     ''}
-    ${lib.optionalString isDarwin ''
-      export AR=$(which ar)
-    ''}
   '';
 
   configureFlags = [
-    "--with-make=make" # by default it tries to find gmake
+    # By default it tries to find gmake
+    "--with-make=make"
+
+    # By default these are subdirectories of prefix (aka $out)
+    # ./0003-Install-files-under-var-and-etc-in-out.patch makes them install in
+    # $out while keeping code references as the runtime directories
     "--sysconfdir=/etc"
     "--localstatedir=/var"
   ];
 
   nativeBuildInputs = [
-    (autoreconfHook.override { libtool = cctools; })
+    (autoreconfHook.override (lib.optionalAttrs isDarwin { libtool = cctools; }))
     pkg-config
     bison
     flex
@@ -184,10 +214,13 @@ llvmPackages_20.stdenv.mkDerivation (finalAttrs: {
     libllvm # bpf -- for llvm-strip command
   ]
   ++ lib.optionals isDarwin [
-    # TODO
-    cctools
-    libtool
+    fixDarwinDylibNames
+    # TODO: drop when default clang is updated
+    # Newer clang needed to avoid compiler crash (!)
+    # https://github.com/llvm/llvm-project/issues/153514
+    clang_20
   ]
+  ++ lib.optional withPython makeWrapper
   ++ lib.optional withQt qtPackages.wrapQtAppsHook;
 
   # needed to compile BPF
@@ -211,6 +244,10 @@ llvmPackages_20.stdenv.mkDerivation (finalAttrs: {
       # TODO: postfix? -- needs qshape
     ]
 
+    # TODO: drop when default SDK is updated
+    # Newer SDK needed for macOS NFS changes (13+) and Qt6 (14+)
+    (lib.optional isDarwin apple-sdk_14)
+
     (lib.optionals isLinux [
       avahi
 
@@ -221,10 +258,14 @@ llvmPackages_20.stdenv.mkDerivation (finalAttrs: {
       systemd # systemd
     ])
 
-    (lib.optionals withPython [ python3 ] ++ (pythonDeps python3.pkgs))
+    # Base Python required for Python.h
+    # (lib.optionals withPython ([ python3 ] ++ (pythonDeps python3.pkgs)))
 
-    # Without base perl it complains about `crypto.h`
-    (lib.optionals withPerl [ perl ] ++ (perlDeps perl.pkgs))
+    # Base Perl required for crypto.h
+    # (lib.optionals withPerl ([ perl ] ++ (perlDeps perl.pkgs)))
+
+    (lib.optional withPython wrappedPython)
+    (lib.optional withPerl wrappedPerl)
 
     # pmchart, pmgadgets, pmview, etc
     (lib.optionals withQt (with qtPackages; [
@@ -239,7 +280,9 @@ llvmPackages_20.stdenv.mkDerivation (finalAttrs: {
   # automatically sets up the structure of `/var/lib/pcp`.
   preInstall = ''
     export NO_CHOWN=true
-    export DIST_TMPFILES=$out/lib/tmpfiles.d/pcp.conf
+    ${lib.optionalString isLinux ''
+      export DIST_TMPFILES="$out/lib/tmpfiles.d/pcp.conf"
+    ''}
   '';
 
   # Only wrap necessary binaries
@@ -248,32 +291,61 @@ llvmPackages_20.stdenv.mkDerivation (finalAttrs: {
   postFixup = ''
     ${lib.optionalString withPython ''
       wrapProgram $out/bin/pmpython \
-        --prefix PYTHONPATH : $out/${python3.sitePackages}
+        --prefix PYTHONPATH : "$out/${python3.sitePackages}"
     ''}
 
     ${lib.optionalString withQt ''
-      for program in "pmchart" "pmview" "pmquery" "pmtime" "pmdumptext"; do
-        if [ -x $out/bin/$program ]; then
-          wrapQtApp $out/bin/$program
+      # Wrap Qt apps.
+      ${lib.concatMapStringsSep "\n" (path: ''
+        if [ -x "${path}" ]; then
+          wrapQtApp "${path}"
         fi
-      done
+      '') guiExes}
 
-      mkdir -p $out/share/icons/hicolor/48x48
-      ln -s $out/share/pcp-gui/pixmaps $out/share/icons/hicolor/48x48/apps
+      ${lib.optionalString (!isDarwin) ''
+        # Symlink the app icon directory for `.desktop` files.
+        mkdir -p "$out/share/icons/hicolor/48x48"
+        ln -s "$out/share/pcp-gui/pixmaps" "$out/share/icons/hicolor/48x48/apps"
+      ''}
+    ''}
+
+    ${lib.optionalString isDarwin ''
+      # Build a list of arguments to `install_name_tool` that change references
+      # to all libraries in `$out/lib` to be the full path.
+      args=""
+      for lib in "$out"/lib/*.dylib; do
+        args="$args -change $(basename "$lib") $(realpath "$lib")"
+      done
+      # args="-add_rpath $out/lib"
+      # for lib in "$out"/lib/libpcp*.dylib; do
+      #   lib="$(basename "$lib")"
+      #   args="$args -change "$lib" "@rpath/$lib""
+      # done
+
+      echo "args: $args"
+
+      # Find all executables, that aren't in /var, and that have lines in the
+      # output of `otool -L $file` that DON'T start with / or @ (so basically
+      # all broken files), and run `install_name_tool` for each one, using the
+      # previously built arguments.
+      find "$out/" -type f -executable \
+        -not -path '*var/lib/pcp*' \
+        -exec sh -c "otool -L '{}' | grep -q $'^\t[^/@]'" \; -print0 | \
+      xargs -0 -I'{}' sh -c "install_name_tool $args '{}' || true"
     ''}
   '';
 
   passthru = {
     tests = { inherit (nixosTests) pcp; };
-  } // lib.optionalAttrs withPython {
-    python = python3;
-    inherit pythonDeps;
-  } // lib.optionalAttrs withPerl {
-    inherit perl perlDeps;
+    interpreters = lib.listToAttrs (lib.concatLists [
+      (lib.optional withPython (lib.nameValuePair "python" wrappedPython))
+      (lib.optional withPerl (lib.nameValuePair "perl" wrappedPerl))
+    ]);
   };
 
   meta = {
     description = "System performance analysis toolkit";
+    mainProgram = "pcp";
     homepage = "https://pcp.io";
     changelog = "https://github.com/performancecopilot/pcp/blob/${finalAttrs.version}/CHANGELOG";
     license = lib.licenses.lgpl21Plus;
