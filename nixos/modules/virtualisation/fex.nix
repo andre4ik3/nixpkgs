@@ -16,15 +16,21 @@ let
 
   magics = utils.binfmtMagics;
 
+  # Discard string context to avoid pulling in each guest library as a
+  # dependency of the system.
+  mkLibPath' = drv: builtins.unsafeDiscardStringContext (mkLibPath drv);
+  mkLibPath = drv: "${lib.getLib drv}/lib";
+
   forwardedLibrarySubmodule = lib.types.submodule ({ name, config, ... }: {
     options = {
       enable = lib.mkEnableOption "forwarding this library" // { default = true; };
 
+      # TODO naming -- guestThunkName? thunkName?
       name = lib.mkOption {
         type = lib.types.str;
         default = "${name}-guest.so";
         defaultText = "‹name›-guest.so";
-        description = "The name of the guest library to be forwarded.";
+        description = "The guest thunk name of the library to be forwarded.";
       };
 
       packages = lib.mkOption {
@@ -32,22 +38,21 @@ let
         default = pkgs: [ pkgs.${name} ];
         defaultText = lib.literalExpression "pkgs: [ pkgs.‹name› ]";
         description = ''
-          The list of packages that contain this library (both in the guest and
-          on the host).
+          The list of guest packages that contain this library.
         '';
       };
 
       extraSearchPaths = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [ "@PREFIX_LIB@" ];
-        defaultText = lib.literalExpression ''[ "@PREFIX_LIB@" ]'';
+        default = [ ];
+        example = lib.literalExpression ''[ "@PREFIX_LIB@" ]'';
         description = ''
           Extra list of path prefixes where the guest library will be replaced
           from.
         '';
       };
 
-      # TODO naming
+      # TODO naming -- guestNames? guestLibraryNames?
       names = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ "${name}.so" ];
@@ -57,58 +62,74 @@ let
         '';
       };
 
+      # === private === #
+
+      searchPaths = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        visible = false;
+        internal = true;
+        readOnly = true;
+        description = ''
+          The final list of search paths to forward in the guest.
+        '';
+      };
+
       paths = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         visible = false;
         internal = true;
         readOnly = true;
         description = ''
-          The final list of paths where this library will be replaced from in
-          the guest.
+          The final list of library paths to forward in the guest.
         '';
       };
     };
 
-    config.paths = let
-      packages = lib.concatMap config.packages cfg.guestPackageSets;
-      # Discard string context to avoid pulling in each guest library as a
-      # dependency.
-      mkLibPath = drv: builtins.unsafeDiscardStringContext "${lib.getLib drv}/lib";
-      libPaths = lib.map mkLibPath packages ++ config.extraSearchPaths;
-      product = lib.cartesianProduct {
-        path = libPaths;
-        name = config.names;
-      };
-    in lib.map (x: "${x.path}/${x.name}") product;
+    config.searchPaths = lib.map mkLibPath' (lib.concatMap config.packages cfg.guestPackageSets)
+      ++ config.extraSearchPaths;
+
+    config.paths = lib.map (x: "${x.path}/${x.name}") (lib.cartesianProduct {
+      path = config.searchPaths;
+      name = config.names;
+    });
   });
 
   defaultForwardedLibraries = {
     libGL.names = ["libGL.so" "libGL.so.1" "libGL.so.1.2.0" "libGL.so.1.7.0"];
     libvulkan = {
       packages = pkgs: [ pkgs.vulkan-loader ];
-      names = ["libvulkan.so" "libvulkan.so.1" "libvulkan.so.1.3.239" "libvulkan.so.${lib.getVersion pkgs.vulkan-loader}"];
+      names = ["libvulkan.so" "libvulkan.so.1" "libvulkan.so.1.4.313"];
     };
-    libdrm.names = ["libdrm.so" "libdrm.so.2" "libdrm.so.2.4.0" "libdrm.so.${lib.getVersion pkgs.libdrm}"];
+    libdrm.names = ["libdrm.so" "libdrm.so.2" "libdrm.so.2.4.0" "libdrm.so.2.124.0"];
     libasound = {
       packages = pkgs: [ pkgs.alsa-lib ];
       names = ["libasound.so" "libasound.so.2" "libasound.so.2.0.0"];
     };
-    wayland = {
-      name = "libwayland-client-guest.so";
-      names = ["libwayland-client.so" "libwayland-client.so.0" "libwayland-client.so.0.20.0" "libwayland-client.so.0.${lib.removePrefix "1." (lib.getVersion pkgs.wayland)}"];
+    libwayland-client = {
+      packages = pkgs: [ pkgs.wayland ];
+      names = ["libwayland-client.so" "libwayland-client.so.0" "libwayland-client.so.0.20.0"  "libwayland-client.so.0.24.0"];
     };
   };
 
-  hostPackageFuncs = lib.mapAttrsToList (_: lib.getAttr "packages") cfg.forwardedLibraries;
-  hostPackages = lib.concatMap (f: f pkgs) hostPackageFuncs;
-  libPath = lib.makeLibraryPath (hostPackages ++ cfg.extraSearchPaths);
-
+  searchPaths = lib.mapAttrsToList (_: x: x.searchPaths) cfg.forwardedLibraries;
+  extraSearchPaths = lib.map mkLibPath (lib.concatMap cfg.extraPackages cfg.guestPackageSets);
+  libPath = lib.makeLibraryPath (lib.concatLists searchPaths ++ extraSearchPaths);
 in
 
 {
   options.virtualisation.fex = {
     enable = lib.mkEnableOption "the FEX x86 emulator";
     package = lib.mkPackageOption pkgs "fex" { };
+
+    addToNixSandbox = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      example = false;
+      description = ''
+        Whether to add the FEX emulator to {option}`nix.settings.extra-platforms`.
+        Disable this to use remote builders for x86 platforms, while allowing testing binaries locally.
+      '';
+    };
 
     guestPackageSets = lib.mkOption {
       type = lib.types.listOf lib.types.pkgs;
@@ -120,6 +141,11 @@ in
         [
           pkgs.pkgsCross.gnu32
           pkgs.pkgsCross.gnu64
+        ]
+      '';
+      example = lib.literalExpression ''
+        [
+          nixpkgs.legacyPackages.x86_64-linux
         ]
       '';
       description = ''
@@ -134,23 +160,16 @@ in
       description = "Guest libraries to forward to host-native versions.";
     };
 
-    extraSearchPaths = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ] ;
+    extraPackages = lib.mkOption {
+      type = lib.types.functionTo (lib.types.listOf lib.types.package);
+      default = lib.const [ ];
+      defaultText = lib.literalExpression "lib.const [ ]";
       description = ''
-        List of extra library search paths to make available to guest executables.
+        Additional packages to add to the guest dynamic library path.
       '';
     };
 
-    addToNixSandbox = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      example = false;
-      description = ''
-        Whether to add the FEX emulator to {option}`nix.settings.extra-platforms`.
-        Disable this to use remote builders for x86 platforms, while allowing testing binaries locally.
-      '';
-    };
+    # TODO: general emulation settings
   };
 
   config = lib.mkIf cfg.enable {
@@ -176,9 +195,12 @@ in
         Config = {
           Env = [ (lib.toShellVar "LD_LIBRARY_PATH" libPath) ];
           ThunkGuestLibs = "${cfg.package}/share/fex-emu/GuestThunks";
-          ThunkHostLibs = "${cfg.package}/share/fex-emu/GuestThunks";
+          ThunkHostLibs = "${cfg.package}/lib/fex-emu/HostThunks";
+          # TODO debugging
+          SilentLog = "0";
+          OutputLog = "stderr";
         };
-        ThunksDB = lib.mapAttrs (name: library: library.enable) cfg.forwardedLibraries;
+        ThunksDB = lib.mapAttrs (name: library: if library.enable then 1 else 0) cfg.forwardedLibraries;
       };
     };
 
