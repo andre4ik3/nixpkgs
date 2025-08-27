@@ -14,15 +14,11 @@ let
     wrapInterpreterInShell = false;
   };
 
-  # magics = lib.importJSON ./binary-magics.json;
   magics = utils.binfmtMagics;
-
-  pkgsCross32 = pkgs.pkgsCross.gnu32;
-  pkgsCross64 = pkgs.pkgsCross.gnu64;
 
   forwardedLibrarySubmodule = lib.types.submodule ({ name, config, ... }: {
     options = {
-      enable = lib.mkEnableOption "forwarding this library";
+      enable = lib.mkEnableOption "forwarding this library" // { default = true; };
 
       name = lib.mkOption {
         type = lib.types.str;
@@ -36,7 +32,8 @@ let
         default = pkgs: [ pkgs.${name} ];
         defaultText = lib.literalExpression "pkgs: [ pkgs.‹name› ]";
         description = ''
-          The list of packages where the host library will be searched for.
+          The list of packages that contain this library (both in the guest and
+          on the host).
         '';
       };
 
@@ -45,7 +42,8 @@ let
         default = [ "@PREFIX_LIB@" ];
         defaultText = lib.literalExpression ''[ "@PREFIX_LIB@" ]'';
         description = ''
-          Extra list of paths where the host library will be searched for.
+          Extra list of path prefixes where the guest library will be replaced
+          from.
         '';
       };
 
@@ -55,70 +53,55 @@ let
         default = [ "${name}.so" ];
         defaultText = lib.literalExpression ''[ "‹name›.so" ]'';
         description = ''
-          The possible names of this library on the host.
+          The possible names of this library in the guest.
         '';
       };
 
-      finalPackages = lib.mkOption {
-        type = lib.types.listOf lib.types.package;
-        visible = false;
-        internal = true;
-        readOnly = true;
-        description = ''
-          The final list of packages where this library will be searched.
-        '';
-      };
-
-      finalPaths = lib.mkOption {
+      paths = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         visible = false;
         internal = true;
         readOnly = true;
         description = ''
-          The final list of paths where this library will be searched.
+          The final list of paths where this library will be replaced from in
+          the guest.
         '';
       };
     };
 
-    config = {
-      finalPackages = config.packages pkgsCross64 ++ config.packages pkgsCross32;
-      finalPaths = lib.map (x: "${x.path}/${x.name}") (lib.cartesianProduct {
-        path = lib.map (p: "${lib.getLib p}/lib") config.finalPackages
-          ++ config.extraSearchPaths;
+    config.paths = let
+      packages = lib.concatMap config.packages cfg.guestPackageSets;
+      # Discard string context to avoid pulling in each guest library as a
+      # dependency.
+      mkLibPath = drv: builtins.unsafeDiscardStringContext "${lib.getLib drv}/lib";
+      libPaths = lib.map mkLibPath packages ++ config.extraSearchPaths;
+      product = lib.cartesianProduct {
+        path = libPaths;
         name = config.names;
-      });
-    };
+      };
+    in lib.map (x: "${x.path}/${x.name}") product;
   });
 
-  # TODO: inferring package name from attribute name is cool and all, but it's
-  # better to use the proper attribute names. or does it even matter?
   defaultForwardedLibraries = {
     libGL.names = ["libGL.so" "libGL.so.1" "libGL.so.1.2.0" "libGL.so.1.7.0"];
     libvulkan = {
       packages = pkgs: [ pkgs.vulkan-loader ];
-      names = ["libvulkan.so" "libvulkan.so.1" "libvulkan.so.1.3.239" "libvulkan.so.${lib.getVersion pkgsCross64.vulkan-loader}"];
-      extraSearchPaths = [
-        # does not actually catch it by that path:
-        "/usr/lib/pressure-vessel/overrides/lib/x86_64-linux-gnu"
-        "/usr/lib/pressure-vessel/overrides/lib/i386-linux-gnu"
-        "@HOME@/.local/share/Steam/ubuntu12_32/steam-runtime/usr/lib/x86_64-linux-gnu"
-        "@HOME@/.local/share/Steam/ubuntu12_32/steam-runtime/usr/lib/i386-linux-gnu"
-        "@PREFIX_LIB@"
-      ];
+      names = ["libvulkan.so" "libvulkan.so.1" "libvulkan.so.1.3.239" "libvulkan.so.${lib.getVersion pkgs.vulkan-loader}"];
     };
-    libdrm.names = ["libdrm.so" "libdrm.so.2" "libdrm.so.2.4.0" "libdrm.so.${lib.getVersion pkgsCross64.libdrm}"];
+    libdrm.names = ["libdrm.so" "libdrm.so.2" "libdrm.so.2.4.0" "libdrm.so.${lib.getVersion pkgs.libdrm}"];
     libasound = {
       packages = pkgs: [ pkgs.alsa-lib ];
       names = ["libasound.so" "libasound.so.2" "libasound.so.2.0.0"];
     };
     wayland = {
       name = "libwayland-client-guest.so";
-      names = ["libwayland-client.so" "libwayland-client.so.0" "libwayland-client.so.0.20.0" "libwayland-client.so.0.${lib.removePrefix "1." (lib.getVersion pkgsCross64.wayland)}"];
+      names = ["libwayland-client.so" "libwayland-client.so.0" "libwayland-client.so.0.20.0" "libwayland-client.so.0.${lib.removePrefix "1." (lib.getVersion pkgs.wayland)}"];
     };
   };
 
-  forwardedPackages = lib.concatLists (lib.mapAttrsToList (_: lib.getAttr "finalPackages") cfg.forwardedLibraries);
-  libPath = lib.makeLibraryPath (forwardedPackages ++ cfg.extraSearchPaths);
+  hostPackageFuncs = lib.mapAttrsToList (_: lib.getAttr "packages") cfg.forwardedLibraries;
+  hostPackages = lib.concatMap (f: f pkgs) hostPackageFuncs;
+  libPath = lib.makeLibraryPath (hostPackages ++ cfg.extraSearchPaths);
 
 in
 
@@ -126,6 +109,24 @@ in
   options.virtualisation.fex = {
     enable = lib.mkEnableOption "the FEX x86 emulator";
     package = lib.mkPackageOption pkgs "fex" { };
+
+    guestPackageSets = lib.mkOption {
+      type = lib.types.listOf lib.types.pkgs;
+      default = [
+        pkgs.pkgsCross.gnu32
+        pkgs.pkgsCross.gnu64
+      ];
+      defaultText = lib.literalExpression ''
+        [
+          pkgs.pkgsCross.gnu32
+          pkgs.pkgsCross.gnu64
+        ]
+      '';
+      description = ''
+        The list of package sets used to retrieve library paths from on the
+        guest.
+      '';
+    };
 
     forwardedLibraries = lib.mkOption {
       type = lib.types.attrsOf forwardedLibrarySubmodule;
@@ -168,7 +169,7 @@ in
       "fex-emu/ThunksDB.json".text = builtins.toJSON {
         DB = lib.mapAttrs (_: library: {
           Library = library.name;
-          Overlay = library.finalPaths;
+          Overlay = library.paths;
         }) cfg.forwardedLibraries;
       };
       "fex-emu/Config.json".text = builtins.toJSON {
@@ -177,20 +178,7 @@ in
           ThunkGuestLibs = "${cfg.package}/share/fex-emu/GuestThunks";
           ThunkHostLibs = "${cfg.package}/share/fex-emu/GuestThunks";
         };
-        # TODO: use forwardedLibraries for this
-        ThunksDB = {
-          wayland = 1;
-          libdrm = 1;
-          libasound = 1;
-          libGL = 1;
-          fex_thunk_test = 0;
-          asound = 0;
-          libvulkan = 1;
-          drm = 1;
-          Vulkan = 1;
-          WaylandClient = 1;
-          GL = 1;
-        };
+        ThunksDB = lib.mapAttrs (name: library: library.enable) cfg.forwardedLibraries;
       };
     };
 

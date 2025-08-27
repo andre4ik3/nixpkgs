@@ -31,7 +31,8 @@ let
   pkgsCross32 = pkgsCross.gnu32;
   pkgsCross64 = pkgsCross.gnu64;
 
-  forwardedLibraries = [
+  # Headers required to build the ThunkLibs subtree
+  libForwardingInputs = lib.map lib.getInclude [
     alsa-lib
     libdrm
     libGL
@@ -42,9 +43,6 @@ let
     xorg.libXrender
     xorg.xorgproto
   ];
-
-  # Headers required to build the ThunkLibs subtree
-  libForwardingInputs = lib.map lib.getInclude forwardedLibraries;
 
   devRootFS = buildEnv {
     name = "fex-dev-rootfs";
@@ -229,10 +227,7 @@ llvmPackages.stdenv.mkDerivation (finalAttrs: {
     ''}
   '';
 
-  passthru = {
-    updateScript = nix-update-script { };
-    inherit forwardedLibraries;
-  };
+  passthru.updateScript = nix-update-script { };
 
   meta = {
     description = "Fast usermode x86 and x86-64 emulator for Arm64 Linux";
