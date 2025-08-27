@@ -22,6 +22,7 @@
   libGL,
   wayland,
   xorg,
+  vulkan-loader,
   withQt ? true,
   qt6,
 }:
@@ -30,8 +31,7 @@ let
   pkgsCross32 = pkgsCross.gnu32;
   pkgsCross64 = pkgsCross.gnu64;
 
-  # Headers required to build the ThunkLibs subtree
-  libForwardingInputs = lib.map lib.getInclude [
+  forwardedLibraries = [
     alsa-lib
     libdrm
     libGL
@@ -42,6 +42,9 @@ let
     xorg.libXrender
     xorg.xorgproto
   ];
+
+  # Headers required to build the ThunkLibs subtree
+  libForwardingInputs = lib.map lib.getInclude forwardedLibraries;
 
   devRootFS = buildEnv {
     name = "fex-dev-rootfs";
@@ -92,6 +95,7 @@ let
     set(CMAKE_CXX_FLAGS "''${CMAKE_CXX_FLAGS} ''${CLANG_FLAGS}")
   '';
 in
+
 llvmPackages.stdenv.mkDerivation (finalAttrs: {
   pname = "fex";
   version = "2508.1";
@@ -219,11 +223,28 @@ llvmPackages.stdenv.mkDerivation (finalAttrs: {
   # don't seem to work when registered as binfmts.
   dontWrapQtApps = true;
   preFixup = lib.optionalString withQt ''
-    wrapQtApp $out/bin/FEXConfig
+    wrapQtApp "$out/bin/FEXConfig"
+  '';
+
+  dontPatchELF = true;
+  postFixup = ''
+    # Manually shrink RPATH of executables
+    patchELF "$out/bin"
+
+    ${lib.optionalString withThunks ''
+      pushd "$out/lib/fex-emu"
+      patchelf --add-rpath "${lib.getLib alsa-lib}/lib" HostThunks/libasound-host.so
+      patchelf --add-rpath "${lib.getLib libdrm}/lib" HostThunks/libdrm-host.so
+      patchelf --add-rpath "${lib.getLib libGL}/lib" HostThunks{,_32}/lib{,E}GL-host.so
+      patchelf --add-rpath "${lib.getLib vulkan-loader}/lib" HostThunks{,_32}/libvulkan-host.so
+      patchelf --add-rpath "${lib.getLib wayland}/lib" HostThunks{,_32}/libwayland-client-host.so
+      popd
+    ''}
   '';
 
   passthru = {
     updateScript = nix-update-script { };
+    inherit forwardedLibraries;
   };
 
   meta = {
