@@ -2,13 +2,13 @@
 
 let
   cfg = config.virtualisation.fex;
+
   common = {
     # Settings taken from the files in `lib/binfmt.d` of the `fex` package
     preserveArgvZero = true;
     openBinary = true;
     matchCredentials = true;
     fixBinary = true;
-
     offset = 0;
     interpreter = lib.getExe' cfg.package "FEXInterpreter";
     wrapInterpreterInShell = false;
@@ -16,16 +16,6 @@ let
 
   # magics = lib.importJSON ./binary-magics.json;
   magics = utils.binfmtMagics;
-
-  # Library forwarding configuration
-  # TODO: cleanup, wrap the FEXInterpreter binary with it
-  libPath = lib.makeLibraryPath cfg.package.passthru.forwardedLibraries;
-  wrapper = pkgs.writeShellApplication {
-    name = "run-with-fex";
-    text = ''
-      LD_LIBRARY_PATH="${libPath}:''${LD_LIBRARY_PATH:-}" exec "$@"
-    '';
-  };
 
   pkgsCross32 = pkgs.pkgsCross.gnu32;
   pkgsCross64 = pkgs.pkgsCross.gnu64;
@@ -69,7 +59,17 @@ let
         '';
       };
 
-      paths = lib.mkOption {
+      finalPackages = lib.mkOption {
+        type = lib.types.listOf lib.types.package;
+        visible = false;
+        internal = true;
+        readOnly = true;
+        description = ''
+          The final list of packages where this library will be searched.
+        '';
+      };
+
+      finalPaths = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         visible = false;
         internal = true;
@@ -80,16 +80,18 @@ let
       };
     };
 
-    config.paths = let
-      packages = config.packages pkgsCross64 ++ config.packages pkgsCross32;
-      searchPaths = lib.map (p: "${lib.getLib p}/lib") packages ++ config.extraSearchPaths;
-      product = lib.cartesianProduct {
-        path = searchPaths;
+    config = {
+      finalPackages = config.packages pkgsCross64 ++ config.packages pkgsCross32;
+      finalPaths = lib.map (x: "${x.path}/${x.name}") (lib.cartesianProduct {
+        path = lib.map (p: "${lib.getLib p}/lib") config.finalPackages
+          ++ config.extraSearchPaths;
         name = config.names;
-      };
-    in lib.map (x: "${x.path}/${x.name}") product;
+      });
+    };
   });
 
+  # TODO: inferring package name from attribute name is cool and all, but it's
+  # better to use the proper attribute names. or does it even matter?
   defaultForwardedLibraries = {
     libGL.names = ["libGL.so" "libGL.so.1" "libGL.so.1.2.0" "libGL.so.1.7.0"];
     libvulkan = {
@@ -114,6 +116,10 @@ let
       names = ["libwayland-client.so" "libwayland-client.so.0" "libwayland-client.so.0.20.0" "libwayland-client.so.0.${lib.removePrefix "1." (lib.getVersion pkgsCross64.wayland)}"];
     };
   };
+
+  forwardedPackages = lib.concatLists (lib.mapAttrsToList (_: lib.getAttr "finalPackages") cfg.forwardedLibraries);
+  libPath = lib.makeLibraryPath (forwardedPackages ++ cfg.extraSearchPaths);
+
 in
 
 {
@@ -125,6 +131,14 @@ in
       type = lib.types.attrsOf forwardedLibrarySubmodule;
       default = defaultForwardedLibraries;
       description = "Guest libraries to forward to host-native versions.";
+    };
+
+    extraSearchPaths = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ] ;
+      description = ''
+        List of extra library search paths to make available to guest executables.
+      '';
     };
 
     addToNixSandbox = lib.mkOption {
@@ -144,20 +158,40 @@ in
       message = "FEX emulation is only supported on aarch64.";
     };
 
-    environment.systemPackages = [ cfg.package wrapper ];
+    environment.systemPackages = [ cfg.package ];
     boot.binfmt.registrations = {
       "FEX-x86" = common // magics.i386-linux;
       "FEX-x86_64" = common // magics.x86_64-linux;
     };
 
-    # TODO: fex doesn't actually search here :(
-    # need to put it... somewhere idk
-    # ln -s /etc/fex-emu/ThunksDB.json ~/.fex-emu/
-    environment.etc."fex-emu/ThunksDB.json".text = builtins.toJSON {
-      DB = lib.mapAttrs (_: library: {
-        Library = library.name;
-        Overlay = library.paths;
-      }) cfg.forwardedLibraries;
+    environment.etc = {
+      "fex-emu/ThunksDB.json".text = builtins.toJSON {
+        DB = lib.mapAttrs (_: library: {
+          Library = library.name;
+          Overlay = library.finalPaths;
+        }) cfg.forwardedLibraries;
+      };
+      "fex-emu/Config.json".text = builtins.toJSON {
+        Config = {
+          Env = [ (lib.toShellVar "LD_LIBRARY_PATH" libPath) ];
+          ThunkGuestLibs = "${cfg.package}/share/fex-emu/GuestThunks";
+          ThunkHostLibs = "${cfg.package}/share/fex-emu/GuestThunks";
+        };
+        # TODO: use forwardedLibraries for this
+        ThunksDB = {
+          wayland = 1;
+          libdrm = 1;
+          libasound = 1;
+          libGL = 1;
+          fex_thunk_test = 0;
+          asound = 0;
+          libvulkan = 1;
+          drm = 1;
+          Vulkan = 1;
+          WaylandClient = 1;
+          GL = 1;
+        };
+      };
     };
 
     nix.settings = lib.mkIf cfg.addToNixSandbox {
