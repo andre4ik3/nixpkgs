@@ -83,6 +83,19 @@ let
     set(CMAKE_C_FLAGS "''${CMAKE_C_FLAGS} ''${CLANG_FLAGS}")
     set(CMAKE_CXX_FLAGS "''${CMAKE_CXX_FLAGS} ''${CLANG_FLAGS}")
   '';
+
+  # Headers required to build the ThunkLibs subtree
+  libForwardingInputs = [
+    alsa-lib.dev
+    libdrm.dev
+    libGL.dev
+    wayland.dev
+    xorg.libX11.dev
+    xorg.libxcb.dev
+    xorg.libXrandr.dev
+    xorg.libXrender.dev
+    xorg.xorgproto
+  ];
 in
 llvmPackages.stdenv.mkDerivation (finalAttrs: {
   pname = "fex";
@@ -127,9 +140,11 @@ llvmPackages.stdenv.mkDerivation (finalAttrs: {
 
     # Add include paths for thunkgen invocation
     substituteInPlace ThunkLibs/HostLibs/CMakeLists.txt \
-      --replace-fail "-- " "-- $(cat ${llvmPackages.stdenv.cc}/nix-support/libc-cflags) $(cat ${llvmPackages.stdenv.cc}/nix-support/libcxx-cxxflags) $NIX_CFLAGS_COMPILE"
+      --replace-fail "-- " "-- $(cat ${llvmPackages.stdenv.cc}/nix-support/libc-cflags) $(cat ${llvmPackages.stdenv.cc}/nix-support/libcxx-cxxflags) ${
+        lib.concatMapStrings (x: "-isystem " + x + "/include ") libForwardingInputs
+      } "
     substituteInPlace ThunkLibs/GuestLibs/CMakeLists.txt \
-      --replace-fail "-- " "-- $(cat ${llvmPackages.stdenv.cc}/nix-support/libcxx-cxxflags)"
+      --replace-fail "-- " "-- $(cat ${llvmPackages.stdenv.cc}/nix-support/libcxx-cxxflags) "
 
     # Patch any references to library wrapper paths
     substituteInPlace FEXCore/Source/Interface/Config/Config.json.in \
@@ -173,18 +188,8 @@ llvmPackages.stdenv.mkDerivation (finalAttrs: {
     pkgsCross32.buildPackages.clang
     libclang
     libllvm
-
-    # Headers required to build the ThunkLibs subtree
-    alsa-lib.dev
-    libdrm.dev
-    libGL.dev
-    wayland.dev
-    xorg.libX11.dev
-    xorg.libxcb.dev
-    xorg.libXrandr.dev
-    xorg.libXrender.dev
-    xorg.xorgproto
   ]
+  ++ libForwardingInputs
   ++ (with qt5; [
     qtbase
     qtdeclarative
