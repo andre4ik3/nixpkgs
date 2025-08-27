@@ -26,6 +26,20 @@
 let
   pkgsCross32 = pkgsCross.gnu32;
   pkgsCross64 = pkgsCross.gnu64;
+
+  # Headers required to build the ThunkLibs subtree
+  libForwardingInputs = lib.map lib.getInclude [
+    alsa-lib
+    libdrm
+    libGL
+    wayland
+    xorg.libX11
+    xorg.libxcb
+    xorg.libXrandr
+    xorg.libXrender
+    xorg.xorgproto
+  ];
+
   devRootFS = buildEnv {
     name = "fex-dev-rootfs";
     paths = [
@@ -33,17 +47,8 @@ let
       pkgsCross32.stdenv.cc.libc_dev
       pkgsCross64.stdenv.cc.cc
       pkgsCross32.stdenv.cc.cc
-
-      alsa-lib.dev
-      libdrm.dev
-      libGL.dev
-      wayland.dev
-      xorg.libX11.dev
-      xorg.libxcb.dev
-      xorg.libXrandr.dev
-      xorg.libXrender.dev
-      xorg.xorgproto
-    ];
+    ]
+    ++ libForwardingInputs;
     ignoreCollisions = true;
     pathsToLink = [
       "/include"
@@ -83,19 +88,6 @@ let
     set(CMAKE_C_FLAGS "''${CMAKE_C_FLAGS} ''${CLANG_FLAGS}")
     set(CMAKE_CXX_FLAGS "''${CMAKE_CXX_FLAGS} ''${CLANG_FLAGS}")
   '';
-
-  # Headers required to build the ThunkLibs subtree
-  libForwardingInputs = [
-    alsa-lib.dev
-    libdrm.dev
-    libGL.dev
-    wayland.dev
-    xorg.libX11.dev
-    xorg.libxcb.dev
-    xorg.libXrandr.dev
-    xorg.libXrender.dev
-    xorg.xorgproto
-  ];
 in
 llvmPackages.stdenv.mkDerivation (finalAttrs: {
   pname = "fex";
