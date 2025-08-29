@@ -21,16 +21,40 @@ let
   mkLibPath' = drv: builtins.unsafeDiscardStringContext (mkLibPath drv);
   mkLibPath = drv: "${lib.getLib drv}/lib";
 
+  wrapHostThunk = { name, rpaths }: pkgs.runCommandLocal "fex-host-thunk-${name}-wrapped" {
+    fex = lib.getLib cfg.package;
+    buildInputs = [ pkgs.patchelf ];
+    libPath = "lib/fex-emu/HostThunks";
+    lib = "${name}-host.so";
+  } ''
+    doPatch() {
+      mkdir -p "$(dirname "$out/$1")"
+      patchelf "$fex/$1" \
+        --output "$out/$1" \
+        ${lib.concatMapStringsSep " " (rpath: "--add-rpath ${rpath}") rpaths}
+    }
+
+    echo "patching host thunk '$lib'..."
+
+    doPatch "$libPath/$lib"
+    if [ -f "$fex/$libPath_32/$lib" ]; then
+      doPatch "$libPath_32/$lib"
+    fi
+  '';
+
   forwardedLibrarySubmodule = lib.types.submodule ({ name, config, ... }: {
     options = {
       enable = lib.mkEnableOption "forwarding this library" // { default = true; };
 
-      # TODO naming -- guestThunkName? thunkName?
       name = lib.mkOption {
         type = lib.types.str;
-        default = "${name}-guest.so";
-        defaultText = "‹name›-guest.so";
-        description = "The guest thunk name of the library to be forwarded.";
+        default = name;
+        defaultText = "‹name›";
+        description = ''
+          The thunk name of the library to be forwarded.
+          The value "{option}`name`-host.so" will be used as the host thunk
+          name, and "{option}`name`-guest.so" as the guest thunk name.
+        '';
       };
 
       packages = lib.mkOption {
@@ -38,60 +62,102 @@ let
         default = pkgs: [ pkgs.${name} ];
         defaultText = lib.literalExpression "pkgs: [ pkgs.‹name› ]";
         description = ''
-          The list of guest packages that contain this library.
+          Packages to add to both {option}`hostPackages` and
+          {option}`guestPackages`.
         '';
       };
 
-      extraSearchPaths = lib.mkOption {
+      hostPackages = lib.mkOption {
+        type = lib.types.listOf lib.types.package;
+        default = [ ];
+        description = ''
+          The list of host packages that contain this library. These packages
+          will be built, and their library paths (suffixed with `/lib`) will be
+          added as RPATHs to the host thunk.
+        '';
+      };
+
+      extraHostPaths = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = ''
+          Extra list of paths which will be added verbatim as RPATHs to the
+          host thunk.
+        '';
+      };
+
+      guestPackages = lib.mkOption {
+        type = lib.types.functionTo (lib.types.listOf lib.types.package);
+        default = pkgs: [ ];
+        defaultText = lib.literalExpression "pkgs: [ ]";
+        description = ''
+          The list of guest packages that contain this library. These packages
+          will not be built, but their paths (suffixed with {option}`names`)
+          will be redirected at runtime to the guest thunk.
+        '';
+      };
+
+      extraGuestPaths = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
         example = lib.literalExpression ''[ "@PREFIX_LIB@" ]'';
         description = ''
-          Extra list of path prefixes where the guest library will be replaced
-          from.
+          Extra list of prefixes, which will be suffixed with {option}`names`
+          and redirected at runtime to the guest thunk.
         '';
       };
 
-      # TODO naming -- guestNames? guestLibraryNames?
       names = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ "${name}.so" ];
         defaultText = lib.literalExpression ''[ "‹name›.so" ]'';
         description = ''
-          The possible names of this library in the guest.
+          The possible names of the object file of this library. They will be
+          prefixed with {option}`extraGuestPaths` and {option}`guestPackages`,
+          and the resulting paths will be redirected at runtime to the guest
+          thunk.
         '';
       };
 
       # === private === #
 
-      searchPaths = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
+      wrappedHostThunk = lib.mkOption {
+        type = lib.types.package;
         visible = false;
         internal = true;
         readOnly = true;
         description = ''
-          The final list of search paths to forward in the guest.
+          The host thunk for this library, with {option}`finalHostPaths` added
+          as RPATHs.
         '';
       };
 
-      paths = lib.mkOption {
+      finalGuestPaths = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         visible = false;
         internal = true;
         readOnly = true;
         description = ''
-          The final list of library paths to forward in the guest.
+          The final list of paths to forward to the guest thunk.
         '';
       };
     };
 
-    config.searchPaths = lib.map mkLibPath' (lib.concatMap config.packages cfg.guestPackageSets)
-      ++ config.extraSearchPaths;
+    config = {
+      wrappedHostThunk = wrapHostThunk {
+        inherit (config) name;
+        rpaths = lib.map mkLibPath (config.packages pkgs ++ config.hostPackages)
+          ++ config.extraHostPaths;
+      };
 
-    config.paths = lib.map (x: "${x.path}/${x.name}") (lib.cartesianProduct {
-      path = config.searchPaths;
-      name = config.names;
-    });
+      finalGuestPaths = lib.map (x: "${x.path}/${x.name}") (lib.cartesianProduct {
+        name = config.names;
+        path = lib.map mkLibPath' (
+          (lib.concatMap (
+            set: config.packages set ++ config.guestPackages set
+          ) cfg.guestPackageSets) ++ config.extraGuestPaths);
+      });
+    };
   });
 
   defaultForwardedLibraries = {
@@ -111,9 +177,14 @@ let
     };
   };
 
-  searchPaths = lib.mapAttrsToList (_: x: x.searchPaths) cfg.forwardedLibraries;
-  extraSearchPaths = lib.map mkLibPath (lib.concatMap cfg.extraPackages cfg.guestPackageSets);
-  libPath = lib.makeLibraryPath (lib.concatLists searchPaths ++ extraSearchPaths);
+  # searchPaths = lib.mapAttrsToList (_: x: x.searchPaths) cfg.forwardedLibraries;
+  # extraSearchPaths = lib.map mkLibPath (lib.concatMap cfg.extraPackages cfg.guestPackageSets);
+  # libPath = lib.makeLibraryPath (lib.concatLists searchPaths ++ extraSearchPaths);
+
+  hostThunks = pkgs.symlinkJoin {
+    name = "fex-host-thunks-wrapped";
+    paths = lib.mapAttrsToList (_: library: library.wrappedHostThunk) cfg.forwardedLibraries;
+  };
 in
 
 {
@@ -178,6 +249,7 @@ in
       message = "FEX emulation is only supported on aarch64.";
     };
 
+    # TODO split lib paths in FEX package so wrong thunks don't get put in path
     environment.systemPackages = [ cfg.package ];
     boot.binfmt.registrations = {
       "FEX-x86" = common // magics.i386-linux;
@@ -187,15 +259,15 @@ in
     environment.etc = {
       "fex-emu/ThunksDB.json".text = builtins.toJSON {
         DB = lib.mapAttrs (_: library: {
-          Library = library.name;
-          Overlay = library.paths;
+          Library = "${library.name}-guest.so";
+          Overlay = library.finalGuestPaths;
         }) cfg.forwardedLibraries;
       };
       "fex-emu/Config.json".text = builtins.toJSON {
         Config = {
-          Env = [ (lib.toShellVar "LD_LIBRARY_PATH" libPath) ];
+          # Env = [ (lib.toShellVar "LD_LIBRARY_PATH" libPath) ];
           ThunkGuestLibs = "${cfg.package}/share/fex-emu/GuestThunks";
-          ThunkHostLibs = "${cfg.package}/lib/fex-emu/HostThunks";
+          ThunkHostLibs = "${hostThunks}/lib/fex-emu/HostThunks";
           # TODO debugging
           SilentLog = "0";
           OutputLog = "stderr";

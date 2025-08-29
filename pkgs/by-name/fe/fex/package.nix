@@ -22,7 +22,6 @@
   libGL,
   wayland,
   xorg,
-  vulkan-loader, # TODO drop
   withQt ? true,
   qt6,
 }:
@@ -209,22 +208,6 @@ llvmPackages.stdenv.mkDerivation (finalAttrs: {
   dontWrapQtApps = true;
   preFixup = lib.optionalString withQt ''
     wrapQtApp "$out/bin/FEXConfig"
-  '';
-
-  dontPatchELF = true;
-  postFixup = ''
-    # Manually shrink RPATH of executables
-    patchELF "$out/bin"
-
-    ${lib.optionalString withThunks ''
-      pushd "$out/lib/fex-emu"
-      patchelf --add-rpath "${lib.getLib alsa-lib}/lib" HostThunks/libasound-host.so
-      patchelf --add-rpath "${lib.getLib libdrm}/lib" HostThunks/libdrm-host.so
-      patchelf --add-rpath "${lib.getLib libGL}/lib" HostThunks{,_32}/lib{,E}GL-host.so
-      patchelf --add-rpath "${lib.getLib vulkan-loader}/lib" HostThunks{,_32}/libvulkan-host.so
-      patchelf --add-rpath "${lib.getLib wayland}/lib" HostThunks{,_32}/libwayland-client-host.so
-      popd
-    ''}
   '';
 
   passthru.updateScript = nix-update-script { };
