@@ -1,4 +1,4 @@
-From 5afd820b349748cca43993ab8fd0684b1c76974c Mon Sep 17 00:00:00 2001
+From 3a4d80cd0d1e1297b3bc27d904a9c07fb7abefe4 Mon Sep 17 00:00:00 2001
 From: andre4ik3 <andre4ik3@fastmail.com>
 Date: Sun, 1 Jun 2025 02:51:31 +0400
 Subject: [PATCH 3/8] Install files under `/var` and `/etc` in $out
@@ -8,7 +8,7 @@ Subject: [PATCH 3/8] Install files under `/var` and `/etc` in $out
  1 file changed, 26 insertions(+), 10 deletions(-)
 
 diff --git a/install-sh b/install-sh
-index 9cf3413e5..839ce0cf1 100755
+index 245792c14..fb1bf81ff 100755
 --- a/install-sh
 +++ b/install-sh
 @@ -96,6 +96,7 @@ _symlink()
@@ -19,7 +19,7 @@ index 9cf3413e5..839ce0cf1 100755
      $RM -f "$__symlink"
      __dir=`dirname "$__symlink" | sed -e 's;//*;/;g'`
      [ ! -d "$__dir" ] && mkdir -p "$__dir"
-@@ -126,6 +127,13 @@ _tmpfiles()
+@@ -127,6 +128,13 @@ _tmpfiles()
      __target=`echo "$1" | sed -e "s;^$DIST_ROOT;;" -e 's;//*;/;g'`
      __symlink=`echo "$2" | sed -e "s;^$DIST_ROOT;;" -e 's;//*;/;g'`
  
@@ -33,7 +33,7 @@ index 9cf3413e5..839ce0cf1 100755
      __rel=`echo "$__symlink" | sed -e 's;^/;;'`	# remove leading slash
      __dlist=`dirname "$__target" | sed -e 's;/; ;g'`
      __tpath=""
-@@ -138,14 +146,20 @@ _tmpfiles()
+@@ -139,14 +147,20 @@ _tmpfiles()
  
  _varcheck()
  {
@@ -61,7 +61,7 @@ index 9cf3413e5..839ce0cf1 100755
      fi
  }
  
-@@ -240,6 +254,7 @@ then
+@@ -241,6 +255,7 @@ then
      # first usage
      #
      $tflag && _usage
@@ -69,7 +69,7 @@ index 9cf3413e5..839ce0cf1 100755
      $MKDIR -p "$dir"
      status=$?
      if [ $status -eq 0 ]
-@@ -264,7 +279,7 @@ then
+@@ -265,7 +280,7 @@ then
      else
  	target=`echo "$DIST_ROOT/$1" | sed -e 's;//*;/;g'`
      fi
@@ -78,7 +78,7 @@ index 9cf3413e5..839ce0cf1 100755
      _symlink "$symlink" "$target"
  else
      list=""
-@@ -295,7 +310,7 @@ else
+@@ -296,7 +311,7 @@ else
  		destfile="$destfile.exe"
  	    fi
  	fi
@@ -87,7 +87,7 @@ index 9cf3413e5..839ce0cf1 100755
  	[ ! -d "$dir" ] && mkdir -p "$dir"
  	if [ -d "$dir/$destfile" ]
  	then
-@@ -337,6 +352,7 @@ else
+@@ -338,6 +353,7 @@ else
  		list="$list $1"
  	    else
  		dir=`echo "$DIST_ROOT/$1" | sed -e 's;//*;/;g'`
@@ -95,7 +95,7 @@ index 9cf3413e5..839ce0cf1 100755
  	    fi
  	    shift
  	done
-@@ -362,7 +378,7 @@ else
+@@ -363,7 +379,7 @@ else
  		fi
  	    fi
  

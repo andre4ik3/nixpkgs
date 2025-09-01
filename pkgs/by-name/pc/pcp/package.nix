@@ -117,7 +117,7 @@ in
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "pcp";
-  version = "6.3.8";
+  version = "7.0.0";
 
   outputs = [
     # TODO: something something cycle detected on Darwin
@@ -133,23 +133,23 @@ stdenv.mkDerivation (finalAttrs: {
     owner = "performancecopilot";
     repo = "pcp";
     tag = finalAttrs.version;
-    hash = "sha256-iSE+VP7UfpKrWONdkrgVX/HLTHzChpCH/2JSsm+O9eo=";
+    hash = "sha256-0Tw714tRrOU/21G6xjJzeGOrZ6ulbBvQM2QufPe4X/0=";
   };
 
   patches = [
-    ./0001-Detect-NixOS-and-build-manpages-on-it.patch
-    ./0002-Move-pmlogctl-lockfile-to-run-pcp.patch
-    ./0003-Install-files-under-var-and-etc-in-out.patch
-    ./0004-Replace-find_library-with-variables-for-library-path.patch
+    ./patches/0001-Detect-NixOS-and-build-manpages-on-it.patch
+    ./patches/0002-Move-pmlogctl-lockfile-to-run-pcp.patch
+    ./patches/0003-Install-files-under-var-and-etc-in-out.patch
+    ./patches/0004-Replace-find_library-with-variables-for-library-path.patch
 
     # pmview has been disabled by default upstream, these patches reenable it
     # note that pmview requires SoQt, which is Qt5-only
-    ./0005-Find-SoQt-using-pkg-config.patch
-    ./0006-pmview-install-desktop-files.patch
+    ./patches/0005-Find-SoQt-using-pkg-config.patch
+    ./patches/0006-pmview-install-desktop-files.patch
 
     # Fixes for building on macOS
-    ./0007-Handle-modern-macOS.patch
-    ./0008-Install-macOS-applications-to-bin-dir.patch
+    ./patches/0007-Handle-modern-macOS.patch
+    ./patches/0008-Install-macOS-applications-to-bin-dir.patch
   ];
 
   # Remove a few hardcoded references to FHS paths in the build and install process
@@ -167,13 +167,13 @@ stdenv.mkDerivation (finalAttrs: {
     ''}
 
     # Replace `/var/tmp` with `/tmp` throughout build scripts
-    substituteInPlace scripts/* src/pmdas/*/mk.rewrite src/python/pcp/fixup \
+    substituteInPlace scripts/* src/pmdas/*/mk.rewrite \
       src/pmdas/linux/add_{snmp,netstat}_field src/libpcp/src/check-errorcodes \
       --replace-quiet "tmp=/var/tmp" "tmp=/tmp"
 
     ${lib.optionalString withPython ''
       # Replace Python C library placeholders with their full paths
-      substituteInPlace src/python/pcp/{{mmv,pmda,pmgui,pmi}.py,pmapi.py.in} \
+      substituteInPlace src/python/pcp/{mmv,pmapi,pmda,pmgui,pmi}.py \
         --subst-var-by c "${libc}" \
         --subst-var-by pcp "$out/lib/libpcp${libExt}" \
         --subst-var-by pcp_mmv "$out/lib/libpcp_mmv${libExt}" \
@@ -196,9 +196,9 @@ stdenv.mkDerivation (finalAttrs: {
     # By default it tries to find gmake
     "--with-make=make"
 
-    # By default these are subdirectories of prefix (aka $out)
-    # ./0003-Install-files-under-var-and-etc-in-out.patch makes them install in
-    # $out while keeping code references as the runtime directories
+    # By default these are subdirectories of prefix (aka $out). Patch #0003
+    # makes them install in $out, while keeping code references as the runtime
+    # directories
     "--sysconfdir=/etc"
     "--localstatedir=/var"
   ];

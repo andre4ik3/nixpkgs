@@ -1,17 +1,17 @@
-From 0127c580845851fc34acb1dd7531f45a48467921 Mon Sep 17 00:00:00 2001
+From eb625bc54d426018bf75ad039d3d01fe2655f7e3 Mon Sep 17 00:00:00 2001
 From: andre4ik3 <andre4ik3@fastmail.com>
 Date: Sun, 1 Jun 2025 02:49:52 +0400
 Subject: [PATCH 2/8] Move pmlogctl lockfile to /run/pcp
 
 ---
- src/pmlogctl/pmlogctl.sh | 42 ++++++++++++++++++++--------------------
- 1 file changed, 21 insertions(+), 21 deletions(-)
+ src/pmlogctl/pmlogctl.sh | 46 ++++++++++++++++++++--------------------
+ 1 file changed, 23 insertions(+), 23 deletions(-)
 
 diff --git a/src/pmlogctl/pmlogctl.sh b/src/pmlogctl/pmlogctl.sh
-index 510bac013..ccc98f638 100755
+index cc31e7484..441a50465 100755
 --- a/src/pmlogctl/pmlogctl.sh
 +++ b/src/pmlogctl/pmlogctl.sh
-@@ -88,30 +88,30 @@ _lock()
+@@ -93,30 +93,30 @@ _lock()
  {
      $SHOWME && return
  
@@ -27,11 +27,9 @@ index 510bac013..ccc98f638 100755
      __delay=200		# 1/10 of a second, so max wait is 20 sec
      while [ $__delay -gt 0 ]
      do
--	if pmlock -v "$__dir/lock" >>$tmp/out 2>&1
-+	if pmlock -v "$__lockfile" >>$tmp/out 2>&1
+-	if pmlock -i "$$ $prog" -v "$__dir/lock" >>$tmp/out 2>&1
++	if pmlock -i "$$ $prog" -v "$__lockfile" >>$tmp/out 2>&1
  	then
--	    echo "$$" >"$__dir/lock"
-+	    echo "$$" >"$__lockfile"
  	    break
  	else
  	    [ -f $tmp/stamp ] || touch -t `pmdate -30M %Y%m%d%H%M` $tmp/stamp
@@ -44,14 +42,16 @@ index 510bac013..ccc98f638 100755
  		then
 -		    _warning "removing lock file older than 30 minutes (PID `cat $__dir/lock`)"
 -		    LC_TIME=POSIX ls -l "$__dir/lock"
+-		    [ -s  "$__dir/lock" ] && cat "$__dir/lock"
 -		    rm -f "$__dir/lock"
 +		    _warning "removing lock file older than 30 minutes (PID `cat $__lockfile`)"
 +		    LC_TIME=POSIX ls -l "$__lockfile"
++		    [ -s  "$__lockfile" ] && cat "$__lockfile"
 +		    rm -f "$__lockfile"
  		else
  		    # there is a small timing window here where pmlock
  		    # might fail, but the lock file has been removed by
-@@ -129,19 +129,19 @@ _lock()
+@@ -134,20 +134,20 @@ _lock()
      then
  	# failed to gain mutex lock
  	#
@@ -60,7 +60,9 @@ index 510bac013..ccc98f638 100755
  	then
  	    _warning "is another $prog job running concurrently?"
 -	    LC_TIME=POSIX ls -l "$__dir/lock"
+-	    [ -s "$__dir/lock" ] && cat "$__dir/lock"
 +	    LC_TIME=POSIX ls -l "$__lockfile"
++	    [ -s "$__lockfile" ] && cat "$__lockfile"
  	else
  	    _error "`cat $tmp/out`"
  	fi
@@ -75,7 +77,7 @@ index 510bac013..ccc98f638 100755
  	fi
      fi
  
-@@ -151,10 +151,10 @@ _lock()
+@@ -157,10 +157,10 @@ _lock()
  _unlock()
  {
      $SHOWME && return
@@ -89,7 +91,7 @@ index 510bac013..ccc98f638 100755
  	$VERY_VERBOSE && echo >&2 "Lock released"
      fi
  }
-@@ -547,7 +547,7 @@ _get_pid()
+@@ -665,7 +665,7 @@ _get_pid()
  
  # do what ${IAM}_check does to a control line in terms of variable
  # expansion
@@ -98,7 +100,7 @@ index 510bac013..ccc98f638 100755
  _expand_control()
  {
      sed \
-@@ -955,7 +955,7 @@ found == 0 && $3 == "'"$host"'" && $6 == "'"$dir"'"	{ print NR >>"'$tmp/match'";
+@@ -1099,7 +1099,7 @@ found == 0 && $3 == "'"$host"'" && $6 == "'"$dir"'"	{ print NR >>"'$tmp/match'";
  		    printf >&2 "$fmt" "$host" "$archive" "$class" "$pid" "$state" "$ident"
  		    if [ "$state" = dead ]
  		    then
@@ -107,7 +109,7 @@ index 510bac013..ccc98f638 100755
  		    fi
  		done
  	    else
-@@ -968,7 +968,7 @@ found == 0 && $3 == "'"$host"'" && $6 == "'"$dir"'"	{ print NR >>"'$tmp/match'";
+@@ -1112,7 +1112,7 @@ found == 0 && $3 == "'"$host"'" && $6 == "'"$dir"'"	{ print NR >>"'$tmp/match'";
  		    printf "$fmt" "$host" "$rules" "$evals" "$class" "$pid" "$state" "$ident"
  		    if [ "$state" = dead ]
  		    then
@@ -116,7 +118,16 @@ index 510bac013..ccc98f638 100755
  		    fi
  		done
  	    fi
-@@ -1376,11 +1376,11 @@ _do_create()
+@@ -1282,7 +1282,7 @@ _do_cond_create()
+ 	echo 0 >$tmp/condition-true
+ 	# if no -p, then we're going to use all the class policy files,
+ 	# unless none exist in which case we'll use the default policy.
+-	# 
++	#
+ 	# Need to ignore backup packaging files.
+ 	#
+ 	if [ "$__POLICY" = $tmp/policy ]
+@@ -1545,11 +1545,11 @@ _do_create()
      do
  	if [ -n "$IDENT" ]
  	then

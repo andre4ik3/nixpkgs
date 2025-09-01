@@ -1,4 +1,4 @@
-From b9099f164b85535574bcca744cde7e44b83f2e2a Mon Sep 17 00:00:00 2001
+From f6f77359a6c4e79300faec04fbe338ff4b9ed71a Mon Sep 17 00:00:00 2001
 From: andre4ik3 <andre4ik3@fastmail.com>
 Date: Thu, 14 Aug 2025 11:23:50 +0000
 Subject: [PATCH 8/8] Install macOS applications to bin dir

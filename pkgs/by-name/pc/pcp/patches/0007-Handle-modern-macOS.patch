@@ -1,4 +1,4 @@
-From 039c9cdea15d6c7677903972ce0c61414fe1bc5c Mon Sep 17 00:00:00 2001
+From 46e8accb0f64ce958c77710944d2b25cab529a0a Mon Sep 17 00:00:00 2001
 From: andre4ik3 <andre4ik3@fastmail.com>
 Date: Thu, 14 Aug 2025 01:20:12 +0000
 Subject: [PATCH 7/8] Handle modern macOS

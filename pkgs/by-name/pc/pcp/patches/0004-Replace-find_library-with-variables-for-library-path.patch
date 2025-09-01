@@ -1,14 +1,14 @@
-From 1aee93d094dde6545307cdd9536c471b577b30bb Mon Sep 17 00:00:00 2001
+From 1c8be71410271f92bf14925acb78853f23ee1131 Mon Sep 17 00:00:00 2001
 From: andre4ik3 <andre4ik3@fastmail.com>
 Date: Sun, 1 Jun 2025 19:09:27 +0400
 Subject: [PATCH 4/8] Replace `find_library` with variables for library paths
 
 ---
- src/python/pcp/mmv.py      | 2 +-
- src/python/pcp/pmapi.py.in | 6 ++----
- src/python/pcp/pmda.py     | 3 +--
- src/python/pcp/pmgui.py    | 5 ++---
- src/python/pcp/pmi.py      | 3 +--
+ src/python/pcp/mmv.py   | 2 +-
+ src/python/pcp/pmapi.py | 6 ++----
+ src/python/pcp/pmda.py  | 3 +--
+ src/python/pcp/pmgui.py | 5 ++---
+ src/python/pcp/pmi.py   | 3 +--
  5 files changed, 7 insertions(+), 12 deletions(-)
 
 diff --git a/src/python/pcp/mmv.py b/src/python/pcp/mmv.py
@@ -24,11 +24,11 @@ index 57bb7e229..0d76a3717 100644
  
  ##############################################################################
  #
-diff --git a/src/python/pcp/pmapi.py.in b/src/python/pcp/pmapi.py.in
-index 488bfdf18..a8cfeddbc 100644
---- a/src/python/pcp/pmapi.py.in
-+++ b/src/python/pcp/pmapi.py.in
-@@ -108,16 +108,14 @@ from ctypes import c_char, c_int, c_uint, c_long, c_char_p, c_void_p
+diff --git a/src/python/pcp/pmapi.py b/src/python/pcp/pmapi.py
+index c2e88760f..3051fbbd9 100644
+--- a/src/python/pcp/pmapi.py
++++ b/src/python/pcp/pmapi.py
+@@ -109,16 +109,14 @@ from ctypes import c_char, c_int, c_uint, c_long, c_char_p, c_void_p
  from ctypes import c_float, c_double, c_int32, c_uint32, c_int64, c_uint64
  from ctypes import CDLL, POINTER, CFUNCTYPE, Structure, Union
  from ctypes import addressof, pointer, sizeof, cast, byref
@@ -89,10 +89,10 @@ index c4f58ed0f..0c0bd7b56 100644
  
  ##############################################################################
 diff --git a/src/python/pcp/pmi.py b/src/python/pcp/pmi.py
-index c5c56b508..6daeb08c0 100644
+index 052b91b1f..312d7fd24 100644
 --- a/src/python/pcp/pmi.py
 +++ b/src/python/pcp/pmi.py
-@@ -53,12 +53,11 @@ from pcp.pmapi import pmID, pmInDom, pmUnits, pmHighResResult, pmResult
+@@ -53,12 +53,11 @@ from pcp.pmapi import pmID, pmInDom, pmUnits, pmResult, pmResult_v2
  from cpmi import pmiErrSymDict, PMI_MAXERRMSGLEN
  from ctypes import c_int, c_uint, c_longlong, c_char_p
  from ctypes import cast, create_string_buffer, POINTER, CDLL

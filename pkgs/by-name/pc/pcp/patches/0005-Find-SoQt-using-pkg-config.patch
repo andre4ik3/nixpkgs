@@ -1,4 +1,4 @@
-From 3447c0275a185f86d3f539e247354fd50a6be5dd Mon Sep 17 00:00:00 2001
+From 86b4b7958db53a211fd27ab867ba78845c3b8d07 Mon Sep 17 00:00:00 2001
 From: andre4ik3 <andre4ik3@fastmail.com>
 Date: Tue, 3 Jun 2025 12:03:10 +0400
 Subject: [PATCH 5/8] Find SoQt using pkg-config
@@ -8,10 +8,10 @@ Subject: [PATCH 5/8] Find SoQt using pkg-config
  1 file changed, 10 insertions(+), 4 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index e204a80cb..19c0f793e 100644
+index 7a0f47f9b..111ad83ab 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -1738,12 +1738,18 @@ AC_SUBST(qmake)
+@@ -1686,12 +1686,18 @@ AC_SUBST(qmake)
  
  enable_qt3d=false
  AS_IF([test "x$do_qt3d" != "xno"], [
