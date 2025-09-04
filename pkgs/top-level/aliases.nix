@@ -498,6 +498,7 @@ mapAliases {
   badtouch = authoscope; # Project was renamed, added 20210626
   badwolf = throw "'badwolf' has been removed due to being unmaintained"; # Added 2025-04-15
   baget = throw "'baget' has been removed due to being unmaintained";
+  bandwidth = throw "'bandwidth' has been removed due to lack of maintenance"; # Added 2025-09-01
   banking = saldo; # added 2025-08-29
   base16-builder = throw "'base16-builder' has been removed due to being unmaintained"; # Added 2025-06-03
   baserow = throw "baserow has been removed, due to lack of maintenance"; # Added 2025-08-02
@@ -1468,6 +1469,7 @@ mapAliases {
   ltwheelconf = throw "'ltwheelconf' has been removed because it is obsolete"; # Added 2025-05-07
   luna-icons = throw "luna-icons has been removed as it was removed upstream"; # Added 2024-10-29
   lucene = throw "lucene has been removed since it was both wildly out of date and was not even built properly for 4 years"; # Added 2025-04-10
+  luci-go = throw "luci-go has been removed since it was unused and failing to build for 5 months"; # Added 2025-08-27
   lumail = throw "'lumail' has been removed since its upstream is unavailable"; # Added 2025-05-07
   lv_img_conv = throw "'lv_img_conv' has been removed from nixpkgs as it is broken"; # Added 2024-06-18
   lxd = lib.warnOnInstantiate "lxd has been renamed to lxd-lts" lxd-lts; # Added 2024-04-01
@@ -2048,6 +2050,7 @@ mapAliases {
   riko4 = throw "'riko4' has been removed as it was unmaintained, failed to build and dependend on outdated libraries"; # Added 2025-05-18
   rippled = throw "rippled has been removed as it was broken and had not been updated since 2022"; # Added 2024-11-25
   rippled-validator-keys-tool = throw "rippled-validator-keys-tool has been removed as it was broken and had not been updated since 2022"; # Added 2024-11-25
+  river = throw "'river' has been renamed to/replaced by 'river-classic'"; # Added 2025-08-30
   rke2_1_29 = throw "'rke2_1_29' has been removed from nixpkgs as it has reached end of life"; # Added 2025-05-05
   rke2_testing = throw "'rke2_testing' has been removed from nixpkgs as the RKE2 testing channel no longer serves releases"; # Added 2025-06-02
   rl_json = tclPackages.rl_json; # Added 2025-05-03
@@ -2417,6 +2420,7 @@ mapAliases {
   vocal = throw "'vocal' has been archived upstream. Consider using 'gnome-podcasts' or 'kasts' instead."; # Added 2025-04-12
   void = throw "'void' has been removed due to lack of upstream maintenance"; # Added 2025-01-25
   volnoti = throw "'volnoti' has been removed due to lack of maintenance upstream."; # Added 2024-12-04
+  voxelands = throw "'voxelands' has been removed due to lack of upstream maintenance"; # Added 2025-08-30
   vtk_9 = lib.warnOnInstantiate "'vtk_9' has been renamed to 'vtk_9_5'" vtk_9_5; # Added 2025-07-18
   vtk_9_egl = lib.warnOnInstantiate "'vtk_9_5' now build with egl support by default, so `vtk_9_egl` is deprecated, consider using 'vtk_9_5' instead." vtk_9_5; # Added 2025-07-18
   vtk_9_withQt5 = throw "'vtk_9_withQt5' has been removed, Consider using 'vtkWithQt5' instead." vtkWithQt5; # Added 2025-07-18
@@ -2443,6 +2447,7 @@ mapAliases {
   webmetro = throw "'webmetro' has been removed due to lack of upstream maintenance"; # Added 2025-01-25
   wg-bond = throw "'wg-bond' has been removed due to lack of upstream maintenance"; # Added 2025-01-25
   whatsapp-for-linux = wasistlos; # Added 2025-01-30
+  wifi-password = throw "'wifi-password' has been removed as it was unmaintained upstream"; # Added 2025-08-29
   wineWayland = wine-wayland;
   winhelpcgi = throw "'winhelpcgi' has been removed as it was unmaintained upstream and broken with GCC 14"; # Added 2025-06-14
   win-pvdrivers = throw "'win-pvdrivers' has been removed as it was subject to the Xen build machine compromise (XSN-01) and has open security vulnerabilities (XSA-468)"; # Added 2025-08-29
@@ -2485,6 +2490,7 @@ mapAliases {
   xflux = throw "'xflux' has been removed as it was unmaintained"; # Added 2025-08-22
   xineLib = throw "'xineLib' has been renamed to/replaced by 'xine-lib'"; # Converted to throw 2024-10-17
   xineUI = throw "'xineUI' has been renamed to/replaced by 'xine-ui'"; # Converted to throw 2024-10-17
+  xinput_calibrator = xinput-calibrator; # Added 2025-08-28
   xjump = throw "'xjump' has been removed as it is unmaintained"; # Added 2025-08-22
   xlsxgrep = throw "'xlsxgrep' has been dropped due to lack of maintenance."; # Added 2024-11-01
   xmlada = gnatPackages.xmlada; # Added 2024-02-25
@@ -2536,6 +2542,8 @@ mapAliases {
   zabbix50 = throw "'zabbix50' has been removed, it would have reached its End of Life a few days after the release of NixOS 25.05. Consider upgrading to 'zabbix60' or 'zabbix70'.";
   zabbix64 = throw "'zabbix64' has been removed because it reached its End of Life. Consider upgrading to 'zabbix70'.";
   zbackup = throw "'zbackup' has been removed due to being unmaintained upstream"; # Added 2025-08-22
+  zeal-qt5 = lib.warnOnInstantiate "'zeal-qt5' has been removed from nixpkgs. Please use 'zeal' instead" zeal; # Added 2025-08-31
+  zeal-qt6 = lib.warnOnInstantiate "'zeal-qt6' has been renamed to 'zeal'" zeal; # Added 2025-08-31
   zeroadPackages = recurseIntoAttrs {
     zeroad = lib.warnOnInstantiate "'zeroadPackages.zeroad' has been renamed to 'zeroad'" zeroad; # Added 2025-03-22
     zeroad-data = lib.warnOnInstantiate "'zeroadPackages.zeroad-data' has been renamed to 'zeroad-data'" zeroad-data; # Added 2025-03-22

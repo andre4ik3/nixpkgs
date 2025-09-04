@@ -3580,9 +3580,6 @@ with pkgs;
     };
   };
   mailnagWithPlugins = mailnag.withPlugins (builtins.attrValues mailnag.availablePlugins);
-  mailpit = callPackage ../servers/mail/mailpit {
-    libtool = if stdenv.hostPlatform.isDarwin then cctools else libtool;
-  };
 
   man = man-db;
 
@@ -4386,8 +4383,6 @@ with pkgs;
   vimpager-latest = callPackage ../tools/misc/vimpager/latest.nix { };
 
   vimwiki-markdown = python3Packages.callPackage ../tools/misc/vimwiki-markdown { };
-
-  visidata = python3Packages.callPackage ../applications/misc/visidata { };
 
   vkbasalt = callPackage ../tools/graphics/vkbasalt {
     vkbasalt32 = pkgsi686Linux.vkbasalt;
@@ -6450,6 +6445,10 @@ with pkgs;
 
   or1k-newlib = callPackage ../development/misc/or1k/newlib.nix { };
 
+  vcsh = callPackage ../by-name/vc/vcsh/package.nix {
+    automake = automake116x;
+  };
+
   ### DEVELOPMENT / TOOLS
 
   inherit (callPackage ../development/tools/alloy { })
@@ -6720,6 +6719,7 @@ with pkgs;
   #     ccacheWrapper = pkgs.ccacheWrapper.override {
   #       extraConfig = ''
   #         export CCACHE_COMPRESS=1
+  #         export CCACHE_SLOPPINESS=random_seed
   #         export CCACHE_DIR=/var/cache/ccache
   #         export CCACHE_UMASK=007
   #       '';
@@ -8568,6 +8568,7 @@ with pkgs;
   msoffcrypto-tool = with python3.pkgs; toPythonApplication msoffcrypto-tool;
 
   mpich = callPackage ../development/libraries/mpich {
+    automake = automake116x;
     ch4backend = libfabric;
   };
 
@@ -10379,9 +10380,12 @@ with pkgs;
     fftw = fftwFloat;
   };
 
+  buildArmTrustedFirmware =
+    callPackage ../misc/arm-trusted-firmware/build-arm-trusted-firmware.nix
+      { };
+
   arm-trusted-firmware = callPackage ../misc/arm-trusted-firmware { };
   inherit (arm-trusted-firmware)
-    buildArmTrustedFirmware
     armTrustedFirmwareTools
     armTrustedFirmwareAllwinner
     armTrustedFirmwareAllwinnerH616
@@ -11176,12 +11180,6 @@ with pkgs;
   xkeyboard_config = xkeyboard-config;
 
   xlsx2csv = with python3Packages; toPythonApplication xlsx2csv;
-
-  zeal-qt5 = libsForQt5.callPackage ../data/documentation/zeal { };
-  zeal = zeal-qt5;
-  zeal-qt6 = qt6Packages.callPackage ../data/documentation/zeal {
-    qtx11extras = null; # Because it does not exist in qt6
-  };
 
   ### APPLICATIONS / GIS
 
@@ -12168,7 +12166,7 @@ with pkgs;
   klayout = libsForQt5.callPackage ../applications/misc/klayout { };
 
   klee = callPackage ../applications/science/logic/klee {
-    llvmPackages = llvmPackages_13;
+    llvmPackages = llvmPackages_18;
   };
 
   kmplayer = libsForQt5.callPackage ../applications/video/kmplayer { };
