@@ -848,6 +848,7 @@ in
   litellm = runTest ./litellm.nix;
   litestream = runTest ./litestream.nix;
   lk-jwt-service = runTest ./matrix/lk-jwt-service.nix;
+  llama-swap = runTest ./web-servers/llama-swap.nix;
   lldap = runTest ./lldap.nix;
   localsend = runTest ./localsend.nix;
   locate = runTest ./locate.nix;
@@ -1330,7 +1331,6 @@ in
   scx = runTest ./scx/default.nix;
   sddm = import ./sddm.nix { inherit runTest; };
   sdl3 = runTest ./sdl3.nix;
-  seafile = runTest ./seafile.nix;
   searx = runTest ./searx.nix;
   seatd = runTest ./seatd.nix;
   send = runTest ./send.nix;
