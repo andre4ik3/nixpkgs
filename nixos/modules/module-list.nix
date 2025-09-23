@@ -1009,6 +1009,13 @@
   ./services/monitoring/opentelemetry-collector.nix
   ./services/monitoring/osquery.nix
   ./services/monitoring/parsedmarc.nix
+  ./services/monitoring/pcp/default.nix
+  ./services/monitoring/pcp/interpreters.nix
+  ./services/monitoring/pcp/pmcd.nix
+  ./services/monitoring/pcp/pmda.nix
+  ./services/monitoring/pcp/pmie.nix
+  ./services/monitoring/pcp/pmlogger.nix
+  ./services/monitoring/pcp/pmproxy.nix
   ./services/monitoring/pgscv.nix
   ./services/monitoring/prometheus/alertmanager-gotify-bridge.nix
   ./services/monitoring/prometheus/alertmanager-irc-relay.nix
