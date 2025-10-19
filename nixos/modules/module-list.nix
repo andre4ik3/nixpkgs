@@ -403,6 +403,7 @@
   ./security/pam_mount.nix
   ./security/please.nix
   ./security/polkit.nix
+  ./security/pwaccess.nix
   ./security/rtkit.nix
   ./security/run0.nix
   ./security/soteria.nix
