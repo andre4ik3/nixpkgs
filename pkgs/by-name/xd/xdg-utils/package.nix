@@ -30,6 +30,7 @@
   perl,
   perlPackages,
   withXdgOpenUsePortalPatch ? true,
+  withXdgScreensaver ? false,
 }:
 
 let
@@ -152,13 +153,7 @@ let
       };
       prologue = "${writeText "xdg-mime-prologue" ''
         export XDG_DATA_DIRS="$XDG_DATA_DIRS''${XDG_DATA_DIRS:+:}${shared-mime-info}/share"
-        export PERL5LIB=${with perlPackages; makePerlPath [ FileMimeInfo ]}
-        export PATH=$PATH:${
-          lib.makeBinPath [
-            coreutils
-            perlPackages.FileMimeInfo
-          ]
-        }
+        export PATH=$PATH:${lib.makeBinPath [ coreutils ]}
       ''}";
     }
 
@@ -200,46 +195,6 @@ let
         "$browser" = true;
         "$KDE_SESSION_VERSION" = true;
       };
-    }
-
-    {
-      scripts = [ "bin/xdg-screensaver" ];
-      interpreter = "${bash}/bin/bash";
-      inputs = commonDeps ++ [
-        hostname
-        perl
-        procps
-      ];
-      # These are desktop-specific, so we don't want xdg-utils to be able to
-      # call them when in a different setup.
-      fake.external = commonFakes ++ [
-        "dcop" # KDE3
-        "lockfile"
-        "mate-screensaver-command" # MATE
-        "xautolock" # Xautolock
-        "xscreensaver-command" # Xscreensaver
-        "xset" # generic-ish X
-      ];
-      keep = {
-        "$MV" = true;
-        "$XPROP" = true;
-        "$lockfile_command" = true;
-      };
-      execer = [
-        "cannot:${perl}/bin/perl"
-      ];
-      prologue = "${writeText "xdg-screensaver-prologue" ''
-        export PERL5LIB=${
-          with perlPackages;
-          makePerlPath [
-            NetDBus
-            XMLTwig
-            XMLParser
-            X11Protocol
-          ]
-        }
-        export PATH=$PATH:${coreutils}/bin
-      ''}";
     }
 
     {
@@ -294,7 +249,46 @@ let
       };
       prologue = commonPrologue;
     }
-  ];
+  ]
+  ++ lib.optional withXdgScreensaver {
+    scripts = [ "bin/xdg-screensaver" ];
+    interpreter = "${bash}/bin/bash";
+    inputs = commonDeps ++ [
+      hostname
+      perl
+      procps
+    ];
+    # These are desktop-specific, so we don't want xdg-utils to be able to
+    # call them when in a different setup.
+    fake.external = commonFakes ++ [
+      "dcop" # KDE3
+      "lockfile"
+      "mate-screensaver-command" # MATE
+      "xautolock" # Xautolock
+      "xscreensaver-command" # Xscreensaver
+      "xset" # generic-ish X
+    ];
+    keep = {
+      "$MV" = true;
+      "$XPROP" = true;
+      "$lockfile_command" = true;
+    };
+    execer = [
+      "cannot:${perl}/bin/perl"
+    ];
+    prologue = "${writeText "xdg-screensaver-prologue" ''
+      export PERL5LIB=${
+        with perlPackages;
+        makePerlPath [
+          NetDBus
+          XMLTwig
+          XMLParser
+          X11Protocol
+        ]
+      }
+      export PATH=$PATH:${coreutils}/bin
+    ''}";
+  };
 in
 
 stdenv.mkDerivation (self: {
@@ -328,6 +322,13 @@ stdenv.mkDerivation (self: {
 
   # explicitly provide a runtime shell so patchShebangs is consistent across build platforms
   buildInputs = [ bash ];
+
+  # only include scripts defined in the solutions above
+  preBuild = let
+    scripts = lib.concatMap (x: map (lib.removePrefix "bin/") x.scripts) solutions;
+  in ''
+    makeFlagsArray+=(SCRIPTS="${lib.concatStringsSep " " scripts}")
+  '';
 
   preFixup = lib.concatStringsSep "\n" (
     map (resholve.phraseSolution "xdg-utils-resholved") solutions
