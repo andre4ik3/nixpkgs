@@ -36,6 +36,7 @@
   sscg,
   systemd,
   udev,
+  util-linux,
   xmlto,
   # Needed for cockpit-machines plugin
   libosinfo,
@@ -170,7 +171,7 @@ stdenv.mkDerivation (finalAttrs: {
   configureFlags = [
     "--enable-prefix-only=yes"
     "--disable-pcp" # TODO: figure out how to package its dependency
-    "--with-default-session-path=/run/wrappers/bin:/run/current-system/sw/bin"
+    "--with-default-session-path=${placeholder "out"}/bin:/etc/cockpit/bin:${util-linux}/bin:/run/wrappers/bin:/run/current-system/sw/bin"
     "--with-admin-group=root" # TODO: really? Maybe "wheel"?
   ];
 
@@ -205,6 +206,7 @@ stdenv.mkDerivation (finalAttrs: {
         } \
         --prefix XDG_DATA_DIRS : ${
           lib.makeSearchPath "share" [
+            "/etc/cockpit"
             libosinfo
             osinfo-db
           ]
