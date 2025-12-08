@@ -38,9 +38,6 @@
   udev,
   util-linux,
   xmlto,
-  # Needed for cockpit-machines plugin
-  libosinfo,
-  osinfo-db,
   # Enables lightweight NixOS branding, replacing the default Cockpit icons
   withBranding ? true,
   nixos-icons,
@@ -171,7 +168,13 @@ stdenv.mkDerivation (finalAttrs: {
   configureFlags = [
     "--enable-prefix-only=yes"
     "--disable-pcp" # TODO: figure out how to package its dependency
-    "--with-default-session-path=${placeholder "out"}/bin:/etc/cockpit/bin:${util-linux}/bin:/run/wrappers/bin:/run/current-system/sw/bin"
+    "--with-default-session-path=${lib.makeBinPath [
+      (placeholder "out")
+      "/etc/cockpit"
+      util-linux
+      "/run/wrappers"
+      "/run/current-system/sw"
+    ]}"
     "--with-admin-group=root" # TODO: really? Maybe "wheel"?
   ];
 
@@ -197,20 +200,13 @@ stdenv.mkDerivation (finalAttrs: {
       wrapProgram $binary \
         --prefix PYTHONPATH : ${
           lib.makeSearchPath python3Packages.python.sitePackages [
-            python3Packages.pygobject3
             "$out"
-          ]
-        } \
-        --prefix GI_TYPELIB_PATH : ${
-          lib.makeSearchPathOutput "lib" "lib/girepository-1.0" [ libosinfo ]
-        } \
-        --prefix XDG_DATA_DIRS : ${
-          lib.makeSearchPath "share" [
+            python3Packages.pygobject3
             "/etc/cockpit"
-            libosinfo
-            osinfo-db
           ]
-        }
+        } \
+        --prefix GI_TYPELIB_PATH : "/etc/cockpit/lib/girepository-1.0" \
+        --prefix XDG_DATA_DIRS : "/etc/cockpit/share"
     done
 
     patchShebangs $out/share/cockpit/issue/update-issue
