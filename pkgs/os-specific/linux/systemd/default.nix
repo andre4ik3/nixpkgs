@@ -239,7 +239,6 @@ stdenv.mkDerivation (finalAttrs: {
   patches = [
     ./0001-Start-device-units-for-uninitialised-encrypted-devic.patch
     ./0003-Fix-NixOS-containers.patch
-    ./0004-Add-some-NixOS-specific-unit-directories.patch
     ./0005-Get-rid-of-a-useless-message-in-user-sessions.patch
     ./0006-hostnamed-localed-timedated-disable-methods-that-cha.patch
     ./0007-Change-usr-share-zoneinfo-to-etc-zoneinfo.patch
