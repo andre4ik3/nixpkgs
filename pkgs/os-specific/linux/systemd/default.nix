@@ -245,12 +245,6 @@ stdenv.mkDerivation (finalAttrs: {
     ./0013-inherit-systemd-environment-when-calling-generators.patch
     ./0014-core-don-t-taint-on-unmerged-usr.patch
     ./0017-meson.build-do-not-create-systemdstatedir.patch
-
-    # systemd tries to link the systemd-ssh-proxy ssh config snippet with tmpfiles
-    # if the install prefix is not /usr, but that does not work for us
-    # because we include the config snippet manually
-    ./0018-meson-Don-t-link-ssh-dropins.patch
-
     ./0019-install-unit_file_exists_full-follow-symlinks.patch
   ]
   ++ lib.optionals (stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isGnu) [
@@ -454,7 +448,7 @@ stdenv.mkDerivation (finalAttrs: {
     (lib.mesonOption "swapoff-path" "${lib.getOutput "swap" util-linux}/sbin/swapoff")
 
     # SSH
-    (lib.mesonOption "sshconfdir" "")
+    (lib.mesonOption "sshconfdir" "${placeholder "out"}/etc/ssh")
     (lib.mesonOption "sshdconfdir" "no")
 
     # RPM
