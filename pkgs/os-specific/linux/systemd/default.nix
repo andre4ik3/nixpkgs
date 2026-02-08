@@ -244,7 +244,6 @@ stdenv.mkDerivation (finalAttrs: {
     ./0012-path-util.h-add-placeholder-for-DEFAULT_PATH_NORMAL.patch
     ./0013-inherit-systemd-environment-when-calling-generators.patch
     ./0014-core-don-t-taint-on-unmerged-usr.patch
-    ./0015-tpm2_context_init-fix-driver-name-checking.patch
     ./0016-systemctl-edit-suggest-systemdctl-edit-runtime-on-sy.patch
     ./0017-meson.build-do-not-create-systemdstatedir.patch
 
