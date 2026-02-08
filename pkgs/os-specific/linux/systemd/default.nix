@@ -239,7 +239,6 @@ stdenv.mkDerivation (finalAttrs: {
   patches = [
     ./0001-Start-device-units-for-uninitialised-encrypted-devic.patch
     ./0003-Fix-NixOS-containers.patch
-    ./0006-hostnamed-localed-timedated-disable-methods-that-cha.patch
     ./0007-Change-usr-share-zoneinfo-to-etc-zoneinfo.patch
     ./0008-localectl-use-etc-X11-xkb-for-list-x11.patch
     ./0009-add-rootprefix-to-lookup-dir-paths.patch
