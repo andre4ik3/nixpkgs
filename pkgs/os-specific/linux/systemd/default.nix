@@ -238,7 +238,6 @@ stdenv.mkDerivation (finalAttrs: {
   # patches
   patches = [
     ./0001-Start-device-units-for-uninitialised-encrypted-devic.patch
-    ./0002-Don-t-try-to-unmount-nix-or-nix-store.patch
     ./0003-Fix-NixOS-containers.patch
     ./0004-Add-some-NixOS-specific-unit-directories.patch
     ./0005-Get-rid-of-a-useless-message-in-user-sessions.patch
