@@ -248,6 +248,8 @@ stdenv.mkDerivation (finalAttrs: {
     ./0017-meson.build-do-not-create-systemdstatedir.patch
     # This can be dropped when v260 is released
     ./0019-install-unit_file_exists_full-follow-symlinks.patch
+    # This can be dropped when https://github.com/systemd/systemd/pull/40635 is released
+    ./0021-locale-util-allow-overriding-locale-directory-via-en.patch
   ]
   ++ lib.optionals (stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isGnu) [
     ./0020-timesyncd-disable-NSCD-when-DNSSEC-validation-is-dis.patch
