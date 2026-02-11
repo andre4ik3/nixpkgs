@@ -578,6 +578,8 @@ in
 
     environment.variables = {
       SYSTEMD_XKB_DIRECTORY = "/etc/X11/xkb";
+      SYSTEMD_KEYMAP_DIRECTORIES = "/etc/kbd/keymaps";
+      SYSTEMD_LOCALE_DIRECTORY = "/run/current-system/sw/lib/locale";
     };
 
     environment.etc =
