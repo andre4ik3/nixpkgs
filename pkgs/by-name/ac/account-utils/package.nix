@@ -5,7 +5,6 @@
   meson,
   ninja,
   pkg-config,
-  cmake,
   linux-pam,
   systemdLibs,
   libcap,
@@ -20,20 +19,19 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "account-utils";
-  version = "1.0.0";
+  version = "1.0.1";
 
   src = fetchFromGitHub {
     owner = "thkukuk";
     repo = "account-utils";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-PhyeZ4yioTMC7Q7wL5K5T74McKjmLqg8A5O5E3mhLgc=";
+    hash = "sha256-QLpqNCp2vTG0qxLx57DxccW8PFAY0TUGNESfrUGhfBk=";
   };
 
   nativeBuildInputs = [
     meson
     ninja
     pkg-config
-    cmake
     libxslt
     docbook-xsl-ns
   ];
