@@ -3,20 +3,20 @@
   buildPythonPackage,
   fetchPypi,
   pytestCheckHook,
-  setuptools,
+  hatchling,
 }:
 
 buildPythonPackage rec {
   pname = "wcwidth";
-  version = "0.2.13";
+  version = "0.6.0";
   pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-cuoMBjmesobZeP3ttpI6nrR+HEhs5j6bTmT8GDA5crU=";
+    hash = "sha256-zcTkJi1u+aGlfgGDhMvrEgjYq7xkF2An4sJFXIExMVk=";
   };
 
-  nativeBuildInputs = [ setuptools ];
+  build-system = [ hatchling ];
 
   nativeCheckInputs = [ pytestCheckHook ];
 
