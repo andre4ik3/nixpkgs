@@ -61,7 +61,7 @@ in
     };
   };
   config =
-    lib.mkIf (config.hardware.facter.reportPath != null && config.hardware.facter.detected.dhcp.enable)
+    lib.mkIf (config.hardware.facter.report != { } && config.hardware.facter.detected.dhcp.enable)
       {
         networking.useDHCP = lib.mkDefault true;
 
