@@ -7,6 +7,8 @@
   writeShellScriptBin,
   fetchFromGitHub,
   gitUpdater,
+  libvirt,
+  virt-manager,
   libosinfo,
   osinfo-db,
 }:
@@ -51,6 +53,8 @@ stdenv.mkDerivation (finalAttrs: {
   passthru = {
     updateScript = gitUpdater { };
     cockpitPath = [
+      libvirt
+      virt-manager
       libosinfo
       osinfo-db
     ];
