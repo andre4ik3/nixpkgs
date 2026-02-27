@@ -306,6 +306,7 @@ stdenv.mkDerivation (finalAttrs: {
     tests = { inherit (nixosTests) cockpit; };
     updateScript = nix-update-script { };
     cockpitPath = [
+      coreutils
       glib
       gobject-introspection
       python3Packages.python
