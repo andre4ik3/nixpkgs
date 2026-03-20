@@ -253,7 +253,7 @@ in
         login = {
           startSession = true;
           allowNullPassword = true;
-          showMotd = true;
+          motd.enable = true;
           lastlog.enable = true;
         };
         chpasswd.rootOK = true;
