@@ -727,6 +727,16 @@ in
                 '';
                 example = "/etc/ssh/banner";
               };
+              # Disabled by default, since pam_lastlog handles this.
+              PrintLastLog =
+                lib.mkEnableOption "printing the last login date when a user logs in interactively"
+                // {
+                  type = lib.types.nullOr lib.types.bool;
+                  default = lib.versionOlder config.system.stateVersion "26.05";
+                  defaultText = lib.literalExpression ''
+                    lib.versionOlder config.system.stateVersion "26.05"
+                  '';
+                };
             };
           }
         );
@@ -874,6 +884,10 @@ in
       security.pam.services.sshd = lib.mkIf (cfg.settings.UsePAM == true) {
         startSession = true;
         motd.enable = true;
+        lastlog = lib.mkIf (lib.versionAtLeast config.system.stateVersion "26.05") {
+          enable = true;
+          silent = false;
+        };
         unixAuth = if cfg.settings.PasswordAuthentication == true then true else false;
       };
 
