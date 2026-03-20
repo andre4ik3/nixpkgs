@@ -138,6 +138,7 @@ let
         (lib.mkRenamedOptionModule [ "enableKwallet" ] [ "kwallet" "enable" ])
         (lib.mkRenamedOptionModule [ "u2fAuth" ] [ "u2f" "enable" ])
         (lib.mkRenamedOptionModule [ "showMotd" ] [ "motd" "enable" ])
+        (lib.mkRenamedOptionModule [ "updateWtmp" ] [ "lastlog" "enable" ])
       ];
 
       options = {
@@ -623,10 +624,21 @@ let
           '';
         };
 
-        updateWtmp = lib.mkOption {
-          default = false;
-          type = lib.types.bool;
-          description = "Whether to update {file}`/var/log/wtmp`.";
+        lastlog = {
+          enable = lib.mkOption {
+            default = false;
+            type = lib.types.bool;
+            description = "Whether to update {file}`/var/log/wtmp`.";
+          };
+
+          silent = lib.mkOption {
+            default = true;
+            example = false;
+            type = lib.types.bool;
+            description = ''
+              Whether to suppress the message showing the last login date.
+            '';
+          };
         };
 
         logFailures = lib.mkOption {
@@ -1561,11 +1573,11 @@ let
               }
               {
                 name = "lastlog";
-                enable = cfg.updateWtmp;
+                enable = cfg.lastlog.enable;
                 control = "required";
                 modulePath = "${pkgs.util-linux.lastlog}/lib/security/pam_lastlog2.so";
                 settings = {
-                  silent = true;
+                  inherit (cfg.lastlog) silent;
                 };
               }
               # Work around https://github.com/systemd/systemd/issues/8598
@@ -2598,7 +2610,7 @@ in
     environment.etc = lib.mapAttrs' makePAMService enabledServices;
 
     systemd =
-      lib.mkIf (lib.any (service: service.updateWtmp) (lib.attrValues config.security.pam.services))
+      lib.mkIf (lib.any (service: service.lastlog.enable) (lib.attrValues config.security.pam.services))
         {
           tmpfiles.packages = [ pkgs.util-linux.lastlog ]; # /lib/tmpfiles.d/lastlog2-tmpfiles.conf
           services.lastlog2-import = {
