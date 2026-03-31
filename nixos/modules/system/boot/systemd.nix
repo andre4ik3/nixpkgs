@@ -603,12 +603,6 @@ in
 
     environment.systemPackages = [ cfg.package ];
 
-    environment.variables = {
-      SYSTEMD_XKB_DIRECTORY = "/etc/X11/xkb";
-      SYSTEMD_KEYMAP_DIRECTORIES = "/etc/kbd/keymaps";
-      SYSTEMD_LOCALE_DIRECTORY = "/run/current-system/sw/lib/locale";
-    };
-
     environment.etc =
       let
         # generate contents for /etc/systemd/${dir} from attrset of links and packages
@@ -818,20 +812,30 @@ in
     # Don't bother with certain units in containers.
     systemd.services.systemd-remount-fs.unitConfig.ConditionVirtualization = "!container";
 
-    # When using the classic /etc mechanism, we set certain paths in /etc to
-    # /etc/static so that systemd cannot change them (as they are symlinks to
-    # the read-only Nix Store). This is only done so that these services cannot
-    # change the values. All other parts of systemd should read them from their
-    # canonical locations.
-    #
-    # If you use the overlay mechanism to manage /etc, this is unnecessary
-    # because either the overlay is mutable (and users can legitimately change
-    # values without them being overridden) or it is immutable and systemd will
-    # suggest to only make runtime changes.
-    systemd.services."systemd-localed".environment = lib.mkIf (!config.system.etc.overlay.enable) {
-      SYSTEMD_ETC_LOCALE_CONF = "/etc/static/locale.conf";
-      SYSTEMD_ETC_VCONSOLE_CONF = "/etc/static/vconsole.conf";
-    };
+    systemd.services."systemd-localed".environment = lib.mkMerge [
+      # When using the classic /etc mechanism, we set certain paths in /etc to
+      # /etc/static so that systemd cannot change them (as they are symlinks to
+      # the read-only Nix Store). This is only done so that these services
+      # cannot change the values. All other parts of systemd should read them
+      # from their canonical locations.
+      #
+      # If you use the overlay mechanism to manage /etc, this is unnecessary
+      # because either the overlay is mutable (and users can legitimately
+      # change values without them being overridden) or it is immutable and
+      # systemd will suggest to only make runtime changes.
+      (lib.mkIf (!config.system.etc.overlay.enable) {
+        SYSTEMD_ETC_LOCALE_CONF = "/etc/static/locale.conf";
+        SYSTEMD_ETC_VCONSOLE_CONF = "/etc/static/vconsole.conf";
+      })
+
+      {
+        # These are needed in order for systemd-localed to discover the locales
+        # in the NixOS paths.
+        SYSTEMD_XKB_DIRECTORY = "/etc/X11/xkb";
+        SYSTEMD_KEYMAP_DIRECTORIES = "/etc/kbd/keymaps";
+        SYSTEMD_LOCALE_DIRECTORY = "/run/current-system/sw/lib/locale";
+      }
+    ];
     systemd.services."systemd-timedated".environment =
       lib.mkIf (!config.system.etc.overlay.enable && config.time.timeZone != null)
         {
