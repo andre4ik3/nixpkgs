@@ -11399,6 +11399,8 @@ self: super: with self; {
 
   msticpy = callPackage ../development/python-modules/msticpy { };
 
+  msynth = callPackage ../development/python-modules/msynth { };
+
   mt-940 = callPackage ../development/python-modules/mt-940 { };
 
   mtcnn = callPackage ../development/python-modules/mtcnn { };
