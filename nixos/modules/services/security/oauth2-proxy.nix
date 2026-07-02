@@ -60,30 +60,32 @@ in
   ];
 
   config = lib.mkIf cfg.enable {
-    users.users.oauth2-proxy = {
-      description = "OAuth2 Proxy";
-      isSystemUser = true;
-      group = "oauth2-proxy";
-    };
-
-    users.groups.oauth2-proxy = { };
-
     systemd.services.oauth2-proxy = {
       description = "OAuth2 Proxy";
-      path = [ cfg.package ];
       wantedBy = [ "multi-user.target" ];
-      restartTriggers = [ cfg.environmentFile ];
       serviceConfig = {
-        User = "oauth2-proxy";
         Restart = "on-failure";
         ExecStart = utils.escapeSystemdExecArgs [
           (lib.getExe cfg.package)
           "--config=${configFile}"
         ];
         EnvironmentFile = cfg.environmentFile;
-        LoadCredential =
-          lib.optional (cfg.clientSecretFile != null) "client-secret:${cfg.clientSecretFile}"
-          ++ lib.optional (cfg.cookie.secretFile != null) "cookie-secret:${cfg.cookie.secretFile}";
+
+        DynamicUser = true;
+
+        # Hardening options from upstream example service file
+        LimitNOFILE = 65535;
+        ProtectHome = true;
+        ProtectHostname = true;
+        ProtectControlGroups = true;
+        ProtectKernelModules = true;
+        ProtectKernelTunables = true;
+        LockPersonality = true;
+        RestrictRealtime = true;
+        RestrictNamespaces = true;
+        MemoryDenyWriteExecute = true;
+        PrivateDevices = true;
+        CapabilityBoundingSet = [ ];
       };
     };
   };
