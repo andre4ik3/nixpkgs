@@ -8,24 +8,6 @@ let
   inherit (utils.systemdUtils.lib) settingsToSections;
   inherit (utils.systemdUtils.unitOptions) unitOption;
 
-  inherit (lib)
-    concatStringsSep
-    elem
-    isList
-    literalExpression
-    mapAttrs'
-    mapAttrsToList
-    mkIf
-    mkMerge
-    mkOption
-    mkOrder
-    mkRenamedOptionModule
-    mkRemovedOptionModule
-    nameValuePair
-    optionalAttrs
-    types
-    ;
-
   cfg = config.services.resolved;
 
   dnsmasqResolve = config.services.dnsmasq.enable && config.services.dnsmasq.resolveLocalQueries;
@@ -36,14 +18,14 @@ let
       key: value:
       # concat lists for options that should result in space-separated values
       if
-        elem key [
+        builtins.elem key [
           "DNS"
           "Domains"
           "FallbackDNS"
         ]
-        && isList value
+        && builtins.isList value
       then
-        concatStringsSep " " value
+        builtins.concatStringsSep " " value
       else
         value
     ) (lib.filterAttrs (key: value: value != null) settings);
@@ -52,27 +34,27 @@ let
 in
 {
   imports = [
-    (mkRenamedOptionModule
+    (lib.mkRenamedOptionModule
       [ "services" "resolved" "fallbackDns" ]
       [ "services" "resolved" "settings" "Resolve" "FallbackDNS" ]
     )
-    (mkRenamedOptionModule
+    (lib.mkRenamedOptionModule
       [ "services" "resolved" "domains" ]
       [ "services" "resolved" "settings" "Resolve" "Domains" ]
     )
-    (mkRenamedOptionModule
+    (lib.mkRenamedOptionModule
       [ "services" "resolved" "llmnr" ]
       [ "services" "resolved" "settings" "Resolve" "LLMNR" ]
     )
-    (mkRenamedOptionModule
+    (lib.mkRenamedOptionModule
       [ "services" "resolved" "dnssec" ]
       [ "services" "resolved" "settings" "Resolve" "DNSSEC" ]
     )
-    (mkRenamedOptionModule
+    (lib.mkRenamedOptionModule
       [ "services" "resolved" "dnsovertls" ]
       [ "services" "resolved" "settings" "Resolve" "DNSOverTLS" ]
     )
-    (mkRemovedOptionModule [
+    (lib.mkRemovedOptionModule [
       "services"
       "resolved"
       "extraConfig"
@@ -83,25 +65,25 @@ in
     services.resolved = {
       enable = lib.mkEnableOption "the Systemd DNS resolver daemon (systemd-resolved)";
 
-      settings.Resolve = mkOption {
+      settings.Resolve = lib.mkOption {
         description = ''
           Settings option for systemd-resolved.
           See {manpage}`resolved.conf(5)` for all available options.
         '';
         default = { };
-        type = types.submodule {
-          freeformType = types.attrsOf unitOption;
+        type = lib.types.submodule {
+          freeformType = lib.types.attrsOf unitOption;
           options = {
-            DNS = mkOption {
+            DNS = lib.mkOption {
               type = unitOption;
               default = config.networking.nameservers;
-              defaultText = literalExpression "config.networking.nameservers";
+              defaultText = lib.literalExpression "config.networking.nameservers";
               description = ''
                 List of IP addresses to query as recursive DNS resolvers.
               '';
             };
 
-            DNSOverTLS = mkOption {
+            DNSOverTLS = lib.mkOption {
               type = unitOption;
               default = false;
               description = ''
@@ -110,7 +92,7 @@ in
               '';
             };
 
-            DNSSEC = mkOption {
+            DNSSEC = lib.mkOption {
               type = unitOption;
               default = false;
               description = ''
@@ -118,10 +100,10 @@ in
               '';
             };
 
-            Domains = mkOption {
+            Domains = lib.mkOption {
               type = unitOption;
               default = config.networking.search;
-              defaultText = literalExpression "config.networking.search";
+              defaultText = lib.literalExpression "config.networking.search";
               example = [
                 "scope.example.com"
                 "example.com"
@@ -134,21 +116,21 @@ in
         };
       };
 
-      dnsDelegates = mkOption {
+      dnsDelegates = lib.mkOption {
         description = ''
           dns-delegate files to be created.
           See {manpage}`systemd.dns-delegate(5)` for more info.
         '';
         default = { };
-        type = types.attrsOf (
-          types.submodule {
-            options.Delegate = mkOption {
+        type = lib.types.attrsOf (
+          lib.types.submodule {
+            options.Delegate = lib.mkOption {
               description = ''
                 Settings option for systemd dns-delegate files.
                 See {manpage}`systemd.dns-delegate(5)` for all available options.
               '';
-              type = types.submodule {
-                freeformType = types.attrsOf unitOption;
+              type = lib.types.submodule {
+                freeformType = lib.types.attrsOf unitOption;
               };
             };
           }
@@ -157,7 +139,7 @@ in
 
     };
 
-    boot.initrd.services.resolved.enable = mkOption {
+    boot.initrd.services.resolved.enable = lib.mkOption {
       default = config.boot.initrd.systemd.network.enable;
       defaultText = "config.boot.initrd.systemd.network.enable";
       description = ''
@@ -168,8 +150,8 @@ in
 
   };
 
-  config = mkMerge [
-    (mkIf cfg.enable {
+  config = lib.mkMerge [
+    (lib.mkIf cfg.enable {
 
       assertions = [
         {
@@ -183,7 +165,7 @@ in
       # add resolve to nss hosts database if enabled and nscd enabled
       # system.nssModules is configured in nixos/modules/system/boot/systemd.nix
       # added with order 501 to allow modules to go before with mkBefore
-      system.nssDatabases.hosts = (mkOrder 501 [ "resolve [!UNAVAIL=return]" ]);
+      system.nssDatabases.hosts = (lib.mkOrder 501 [ "resolve [!UNAVAIL=return]" ]);
 
       systemd.additionalUpstreamSystemUnits = [
         "systemd-resolved.service"
@@ -197,7 +179,7 @@ in
         reloadTriggers = [
           config.environment.etc."systemd/resolved.conf".source
         ]
-        ++ mapAttrsToList (
+        ++ lib.mapAttrsToList (
           name: _: config.environment.etc."systemd/dns-delegate.d/${name}.dns-delegate".source
         ) cfg.dnsDelegates;
         stopIfChanged = false;
@@ -210,12 +192,12 @@ in
         # https://www.freedesktop.org/software/systemd/man/systemd-resolved.html#/etc/resolv.conf
         "resolv.conf".source = "/run/systemd/resolve/stub-resolv.conf";
       }
-      // optionalAttrs dnsmasqResolve {
+      // lib.optionalAttrs dnsmasqResolve {
         "dnsmasq-resolv.conf".source = "/run/systemd/resolve/resolv.conf";
       }
-      // mapAttrs' (
+      // lib.mapAttrs' (
         name: value:
-        nameValuePair "systemd/dns-delegate.d/${name}.dns-delegate" {
+        lib.nameValuePair "systemd/dns-delegate.d/${name}.dns-delegate" {
           text = settingsToSections (transformSettings value);
         }
       ) cfg.dnsDelegates;
@@ -235,7 +217,7 @@ in
 
     })
 
-    (mkIf config.boot.initrd.services.resolved.enable {
+    (lib.mkIf config.boot.initrd.services.resolved.enable {
 
       assertions = [
         {
