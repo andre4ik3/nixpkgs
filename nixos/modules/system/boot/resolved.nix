@@ -137,6 +137,26 @@ in
         );
       };
 
+      services = lib.mkOption {
+        description = ''
+          DNS Service Discovery (dnssd) files to be created.
+          See {manpage}`systemd.dnssd(5)` for more info.
+        '';
+        default = { };
+        type = lib.types.attrsOf (
+          lib.types.submodule {
+            options.Service = lib.mkOption {
+              description = ''
+                Settings option for systemd dnssd files.
+                See {manpage}`systemd.dnssd(5)` for all available options.
+              '';
+              type = lib.types.submodule {
+                freeformType = lib.types.attrsOf unitOption;
+              };
+            };
+          }
+        );
+      };
     };
 
     boot.initrd.services.resolved.enable = lib.mkOption {
@@ -200,7 +220,13 @@ in
         lib.nameValuePair "systemd/dns-delegate.d/${name}.dns-delegate" {
           text = settingsToSections (transformSettings value);
         }
-      ) cfg.dnsDelegates;
+      ) cfg.dnsDelegates
+      // lib.mapAttrs' (
+        name: value:
+        lib.nameValuePair "systemd/dnssd/${name}.dnssd" {
+          text = settingsToSections (transformSettings value);
+        }
+      ) cfg.services;
 
       # If networkmanager is enabled, ask it to interface with resolved.
       networking.networkmanager.dns = "systemd-resolved";
