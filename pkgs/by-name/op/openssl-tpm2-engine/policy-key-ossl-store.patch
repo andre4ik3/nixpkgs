@@ -1,0 +1,72 @@
+From: Opus 5.5 <noreply@anthropic.com>
+Date: Wed, 23 Sep 2026 21:23:15 +0000
+Subject: [PATCH] signed_tpm2_policy: load the policy key via OSSL_STORE
+
+---
+ src/libcommon/tpm2-common.c | 35 ++++++++++++++++++++++++++---------
+ 1 file changed, 26 insertions(+), 9 deletions(-)
+
+diff --git a/src/libcommon/tpm2-common.c b/src/libcommon/tpm2-common.c
+index fc1b9c3..3bd7880 100644
+--- a/src/libcommon/tpm2-common.c
++++ b/src/libcommon/tpm2-common.c
+@@ -27,6 +27,7 @@
+ #include <openssl/err.h>
+ #include <openssl/ui.h>
+ #include <openssl/rand.h>
++#include <openssl/store.h>
+ 
+ #include "tpm2-tss.h"
+ #include "tpm2-asn.h"
+@@ -2556,7 +2557,6 @@ int tpm2_get_signed_policy(char *tpmkey, STACK_OF(TSSAUTHPOLICY) **sk)
+ TPM_RC tpm2_new_signed_policy(char *tpmkey, char *policykey, char *engine,
+ 			      TSSAUTHPOLICY *ap, TPMT_HA *digest, int need_auth)
+ {
+-	BIO *bf;
+ 	TSSPRIVKEY *tpk;
+ 	EVP_PKEY *pkey;
+ 	TSSOPTPOLICY *policy;
+@@ -2605,15 +2605,32 @@ TPM_RC tpm2_new_signed_policy(char *tpmkey, char *policykey, char *engine,
+ 		goto err_free_tpmkey;
+ 	}
+ 
+-	bf = BIO_new_file(policykey, "r");
+-	if (!bf) {
+-		fprintf(stderr, "File %s does not exist or cannot be read\n",
+-			policykey);
+-		goto err_free_tpmkey;
++	/*
++	 * Load the policy key through OSSL_STORE, so besides a PEM file it can
++	 * be any URI a loaded provider understands, e.g. a pkcs11: URI for a
++	 * key on a hardware token.
++	 */
++	pkey = NULL;
++	{
++		OSSL_STORE_CTX *store;
++
++		store = OSSL_STORE_open(policykey, NULL, NULL, NULL, NULL);
++		if (!store) {
++			fprintf(stderr, "Policy key %s cannot be opened\n",
++				policykey);
++			goto err_free_tpmkey;
++		}
++		OSSL_STORE_expect(store, OSSL_STORE_INFO_PKEY);
++		while (!pkey && !OSSL_STORE_eof(store)) {
++			OSSL_STORE_INFO *info = OSSL_STORE_load(store);
++
++			if (info && OSSL_STORE_INFO_get_type(info) ==
++			    OSSL_STORE_INFO_PKEY)
++				pkey = OSSL_STORE_INFO_get1_PKEY(info);
++			OSSL_STORE_INFO_free(info);
++		}
++		OSSL_STORE_close(store);
+ 	}
+-
+-	pkey = PEM_read_bio_PrivateKey(bf, NULL, NULL, NULL);
+-	BIO_free(bf);
+ 	if (!pkey) {
+ 		fprintf(stderr, "Could not get policy private key\n");
+ 		goto err_free_tpmkey;
+-- 
+2.55.0
+
