@@ -13,16 +13,17 @@
 
 buildGoModule (finalAttrs: {
   pname = "sbctl";
-  version = "0.18";
+  version = "0.18-unstable-2026-09-06";
 
   src = fetchFromGitHub {
     owner = "Foxboron";
     repo = "sbctl";
-    tag = finalAttrs.version;
-    hash = "sha256-Q8uQ74XvteMRcnUPu1PjLAPWt3jeI7aF4m3QMjiZJis=";
+    # Verifies signatures made by systemd-sbsign (Foxboron/sbctl@ef8427b).
+    rev = "3ae0c7e6c7cb28e4f8b8504ec4e49346497cd490";
+    hash = "sha256-hXMNVrOOY2o0JG5ldJi9IZfks4xjQInzZWCkUxA+TK0=";
   };
 
-  vendorHash = "sha256-PwLdWoC8tjdKoUAg2xvopggpgZ9WKaUslO3ZBtBah2k=";
+  vendorHash = "sha256-gLOYs4G4XkP/TQn1We1vUfCYELY7QBum0Q1cwE8CTk4=";
 
   ldflags = [
     "-s"
@@ -59,7 +60,7 @@ buildGoModule (finalAttrs: {
       --zsh <($out/bin/sbctl completion zsh)
   '';
 
-  passthru.updateScript = nix-update-script { };
+  passthru.updateScript = nix-update-script { extraArgs = [ "--version=branch" ]; };
 
   meta = {
     description = "Secure Boot key manager";
