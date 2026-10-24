@@ -958,6 +958,11 @@ in
     inherit pkgs runTest;
   };
   kernel-generic = handleTest ./kernel-generic { };
+  kernel-module-hashes = runTest ./kernel-module-hashes;
+  kernel-module-hashes-latest = runTest {
+    imports = [ ./kernel-module-hashes ];
+    _module.args.latestKernel = true;
+  };
   kernel-latest-ath-user-regd = runTest ./kernel-latest-ath-user-regd.nix;
   kernel-module-verification = runTest ./kernel-module-verification.nix;
   kernel-module-verification-latest = runTest {

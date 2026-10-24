@@ -1,0 +1,51 @@
+From a4f86eedf68ad80962c49e3dd7149958fc099ce7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Thomas=20Wei=C3=9Fschuh?= <linux@weissschuh.net>
+Date: Tue, 5 May 2026 11:05:10 +0200
+Subject: [PATCH 06/17] module: Switch load_info::len to size_t
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Switching the types will make some later changes cleaner.
+size_t is also the semantically correct type for this field.
+
+As both 'size_t' and 'unsigned long' are always the same size, this
+should be risk-free.
+
+Reviewed-by: Nicolas Schier <nsc@kernel.org>
+Acked-by: Nicolas Schier <nsc@kernel.org>
+Signed-off-by: Thomas Weißschuh <linux@weissschuh.net>
+---
+ kernel/module/internal.h | 2 +-
+ kernel/module/main.c     | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/kernel/module/internal.h b/kernel/module/internal.h
+index e68fbcd60c35..037fbb3b7168 100644
+--- a/kernel/module/internal.h
++++ b/kernel/module/internal.h
+@@ -66,7 +66,7 @@ struct load_info {
+ 	/* pointer to module in temporary copy, freed at end of load_module() */
+ 	struct module *mod;
+ 	Elf_Ehdr *hdr;
+-	unsigned long len;
++	size_t len;
+ 	Elf_Shdr *sechdrs;
+ 	char *secstrings, *strtab;
+ 	unsigned long symoffs, stroffs, init_typeoffs, core_typeoffs;
+diff --git a/kernel/module/main.c b/kernel/module/main.c
+index 3745cd02c847..432467ba32d4 100644
+--- a/kernel/module/main.c
++++ b/kernel/module/main.c
+@@ -1845,7 +1845,7 @@ static int validate_section_offset(const struct load_info *info, Elf_Shdr *shdr)
+ static int elf_validity_ehdr(const struct load_info *info)
+ {
+ 	if (info->len < sizeof(*(info->hdr))) {
+-		pr_err("Invalid ELF header len %lu\n", info->len);
++		pr_err("Invalid ELF header len %zu\n", info->len);
+ 		return -ENOEXEC;
+ 	}
+ 	if (memcmp(info->hdr->e_ident, ELFMAG, SELFMAG) != 0) {
+-- 
+2.55.0
+

@@ -4,6 +4,7 @@
 # Also generate an appropriate modules.dep.
 
 {
+  lib,
   stdenvNoCC,
   kernel,
   firmware,
@@ -14,13 +15,13 @@
   extraFirmwarePaths ? [ ],
 }:
 
+let
+  preserveModuleBytes = kernel.moduleHashesFinalized or false;
+in
 stdenvNoCC.mkDerivation {
   name = kernel.name + "-shrunk";
   builder = ./modules-closure.sh;
-  nativeBuildInputs = [
-    nukeReferences
-    kmod
-  ];
+  nativeBuildInputs = [ kmod ] ++ lib.optional (!preserveModuleBytes) nukeReferences;
   inherit
     kernel
     firmware
@@ -28,5 +29,6 @@ stdenvNoCC.mkDerivation {
     allowMissing
     extraFirmwarePaths
     ;
-  allowedReferences = [ "out" ];
+  preserveModuleBytes = lib.boolToString preserveModuleBytes;
+  ${if preserveModuleBytes then null else "allowedReferences"} = [ "out" ];
 }

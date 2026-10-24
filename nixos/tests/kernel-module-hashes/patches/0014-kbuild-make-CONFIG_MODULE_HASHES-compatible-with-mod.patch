@@ -1,0 +1,109 @@
+From 99f2ba3ba286844c8907bdd92d3b1a8aefffa264 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Thomas=20Wei=C3=9Fschuh?= <linux@weissschuh.net>
+Date: Tue, 5 May 2026 11:05:18 +0200
+Subject: [PATCH 14/17] kbuild: make CONFIG_MODULE_HASHES compatible with
+ module stripping
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+CONFIG_MODULE_HASHES needs to process the modules at build time in the
+exact form they will be loaded at runtime. If the modules are stripped
+afterwards they will not be loadable anymore.
+
+Also evaluate INSTALL_MOD_STRIP at build time and build the hashes based
+on modules stripped this way.
+
+If users specify inconsistent values of INSTALL_MOD_STRIP between build
+and installation time, an error is reported.
+
+Signed-off-by: Thomas Weißschuh <linux@weissschuh.net>
+Reviewed-by: Nicolas Schier <nsc@kernel.org>
+---
+ .gitignore                | 1 +
+ kernel/module/Kconfig     | 5 +++++
+ scripts/Makefile.modfinal | 9 +++++++++
+ scripts/Makefile.modinst  | 4 ++--
+ scripts/Makefile.vmlinux  | 2 +-
+ 5 files changed, 18 insertions(+), 3 deletions(-)
+
+diff --git a/.gitignore b/.gitignore
+index 1f7119086dfd..07b51eae2434 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -29,6 +29,7 @@
+ *.gz
+ *.i
+ *.ko
++*.ko.stripped
+ *.lex.c
+ *.ll
+ *.lst
+diff --git a/kernel/module/Kconfig b/kernel/module/Kconfig
+index 745ecd2393eb..3ad50a146708 100644
+--- a/kernel/module/Kconfig
++++ b/kernel/module/Kconfig
+@@ -425,6 +425,11 @@ config MODULE_HASHES
+ 
+ 	  Also see the warning in MODULE_SIG about stripping modules.
+ 
++# To validate the consistency of INSTALL_MOD_STRIP for MODULE_HASHES
++config MODULE_INSTALL_STRIP
++	string
++	default "$(INSTALL_MOD_STRIP)"
++
+ config MODULE_ALLOW_MISSING_NAMESPACE_IMPORTS
+ 	bool "Allow loading of modules with missing namespace imports"
+ 	help
+diff --git a/scripts/Makefile.modfinal b/scripts/Makefile.modfinal
+index 639eb2a0ef60..96aa1b4d7ca2 100644
+--- a/scripts/Makefile.modfinal
++++ b/scripts/Makefile.modfinal
+@@ -60,7 +60,16 @@ ifdef CONFIG_DEBUG_INFO_BTF_MODULES
+ 	+$(if $(newer-prereqs),$(call cmd,btf_ko))
+ endif
+ 
++%.ko.stripped: %.ko $(wildcard include/config/MODULE_INSTALL_STRIP)
++	$(call cmd,install_mod)
++	$(call cmd,strip_mod)
++
++ifneq ($(CONFIG_MODULE_INSTALL_STRIP),)
++modules.order: $(modules:%.o=%.ko.stripped)
++endif
++
+ targets += $(modules:%.o=%.ko) $(modules:%.o=%.mod.o) .module-common.o
++targets += $(modules:%.o=%.ko.stripped)
+ 
+ # Update modules.order when a module is (re-)built.
+ # Allow using it as target dependency.
+diff --git a/scripts/Makefile.modinst b/scripts/Makefile.modinst
+index b95f613e23c8..fd1fb89bb0bd 100644
+--- a/scripts/Makefile.modinst
++++ b/scripts/Makefile.modinst
+@@ -68,8 +68,8 @@ __modinst: $(install-y)
+ 
+ ifdef CONFIG_MODULE_HASHES
+ ifeq ($(KBUILD_EXTMOD),)
+-ifdef INSTALL_MOD_STRIP
+-$(error CONFIG_MODULE_HASHES and INSTALL_MOD_STRIP are mutually exclusive)
++ifneq ($(INSTALL_MOD_STRIP),$(CONFIG_MODULE_INSTALL_STRIP))
++$(error Inconsistent values for INSTALL_MOD_STRIP between build and installation)
+ endif
+ endif
+ endif
+diff --git a/scripts/Makefile.vmlinux b/scripts/Makefile.vmlinux
+index fccd4a3e8de3..66ec1ff8a618 100644
+--- a/scripts/Makefile.vmlinux
++++ b/scripts/Makefile.vmlinux
+@@ -86,7 +86,7 @@ modules.order: vmlinux.unstripped FORCE
+ 	$(Q)$(MAKE) -f $(srctree)/Makefile modules
+ 
+ quiet_cmd_modules_merkle_tree = MERKLE  $@
+-      cmd_modules_merkle_tree = $< $@ .ko
++      cmd_modules_merkle_tree = $< $@ $(if $(CONFIG_MODULE_INSTALL_STRIP),.ko.stripped,.ko)
+ 
+ targets += .tmp_module_hashes.c
+ .tmp_module_hashes.c: $(objtree)/scripts/modules-merkle-tree modules.order FORCE
+-- 
+2.55.0
+

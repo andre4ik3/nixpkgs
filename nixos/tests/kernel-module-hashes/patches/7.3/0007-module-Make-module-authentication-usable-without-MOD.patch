@@ -1,0 +1,235 @@
+From f3d3a227e27e3f40b88fe730dfd8e95e49fa09f9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Thomas=20Wei=C3=9Fschuh?= <linux@weissschuh.net>
+Date: Tue, 5 May 2026 11:05:11 +0200
+Subject: [PATCH 07/17] module: Make module authentication usable without
+ MODULE_SIG
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The module authentication functionality will also be used by the
+hash-based module authentication. Split it out from CONFIG_MODULE_SIG
+so it is usable by both.
+
+Signed-off-by: Thomas Weißschuh <linux@weissschuh.net>
+Assisted-by: GPT-5.6-Sol (Codex)
+---
+ crypto/algapi.c          |  4 ++--
+ include/linux/module.h   | 18 +++++++++---------
+ kernel/module/Kconfig    |  5 ++++-
+ kernel/module/Makefile   |  1 +
+ kernel/module/auth.c     | 32 ++++++++++++++++++++++++++++++++
+ kernel/module/internal.h |  2 +-
+ kernel/module/main.c     |  8 ++++----
+ kernel/module/signing.c  | 23 +----------------------
+ 8 files changed, 54 insertions(+), 39 deletions(-)
+ create mode 100644 kernel/module/auth.c
+
+diff --git a/crypto/algapi.c b/crypto/algapi.c
+index 37de377..14252b7 100644
+--- a/crypto/algapi.c
++++ b/crypto/algapi.c
+@@ -24,8 +24,8 @@ static LIST_HEAD(crypto_template_list);
+ 
+ static inline void crypto_check_module_sig(struct module *mod)
+ {
+-	if (fips_enabled && mod && !module_sig_ok(mod))
+-		panic("Module %s signature verification failed in FIPS mode\n",
++	if (fips_enabled && mod && !module_auth_ok(mod))
++		panic("Module %s authentication failed in FIPS mode\n",
+ 		      module_name(mod));
+ }
+ 
+diff --git a/include/linux/module.h b/include/linux/module.h
+index 96cc985..67f68ac 100644
+--- a/include/linux/module.h
++++ b/include/linux/module.h
+@@ -437,9 +437,9 @@ struct module {
+ 	/* GPL-only exported symbols. */
+ 	bool using_gplonly_symbols;
+ 
+-#ifdef CONFIG_MODULE_SIG
+-	/* Signature was verified. */
+-	bool sig_ok;
++#ifdef CONFIG_MODULE_AUTH
++	/* Module was authenticated. */
++	bool auth_ok;
+ #endif
+ 
+ 	bool async_probe_requested;
+@@ -914,16 +914,16 @@ static inline bool retpoline_module_ok(bool has_retpoline)
+ }
+ #endif
+ 
+-#ifdef CONFIG_MODULE_SIG
++#ifdef CONFIG_MODULE_AUTH
+ bool is_module_sig_enforced(void);
+ 
+ void set_module_sig_enforced(void);
+ 
+-static inline bool module_sig_ok(struct module *module)
++static inline bool module_auth_ok(struct module *module)
+ {
+-	return module->sig_ok;
++	return module->auth_ok;
+ }
+-#else	/* !CONFIG_MODULE_SIG */
++#else	/* !CONFIG_MODULE_AUTH */
+ static inline bool is_module_sig_enforced(void)
+ {
+ 	return false;
+@@ -933,11 +933,11 @@ static inline void set_module_sig_enforced(void)
+ {
+ }
+ 
+-static inline bool module_sig_ok(struct module *module)
++static inline bool module_auth_ok(struct module *module)
+ {
+ 	return true;
+ }
+-#endif	/* CONFIG_MODULE_SIG */
++#endif	/* CONFIG_MODULE_AUTH */
+ 
+ #if defined(CONFIG_MODULES) && defined(CONFIG_KALLSYMS)
+ int module_kallsyms_on_each_symbol(const char *modname,
+diff --git a/kernel/module/Kconfig b/kernel/module/Kconfig
+index 43b1bb0..ddca9c9 100644
+--- a/kernel/module/Kconfig
++++ b/kernel/module/Kconfig
+@@ -271,9 +271,12 @@ config MODULE_SIG
+ 	  debuginfo strip done by some packagers (such as rpmbuild) and
+ 	  inclusion into an initramfs that wants the module size reduced.
+ 
++config MODULE_AUTH
++	def_bool MODULE_SIG
++
+ config MODULE_SIG_FORCE
+ 	bool "Require modules to be validly signed"
+-	depends on MODULE_SIG
++	depends on MODULE_AUTH
+ 	help
+ 	  Reject unsigned modules or signed modules for which we don't have a
+ 	  key.  Without this, such modules will simply taint the kernel.
+diff --git a/kernel/module/Makefile b/kernel/module/Makefile
+index 50ffcc4..11fc467 100644
+--- a/kernel/module/Makefile
++++ b/kernel/module/Makefile
+@@ -12,6 +12,7 @@ obj-y += strict_rwx.o
+ obj-y += kmod.o
+ obj-$(CONFIG_MODULE_DEBUG_AUTOLOAD_DUPS) += dups.o
+ obj-$(CONFIG_MODULE_DECOMPRESS) += decompress.o
++obj-$(CONFIG_MODULE_AUTH) += auth.o
+ obj-$(CONFIG_MODULE_SIG) += signing.o
+ obj-$(CONFIG_LIVEPATCH) += livepatch.o
+ obj-$(CONFIG_MODULES_TREE_LOOKUP) += tree_lookup.o
+diff --git a/kernel/module/auth.c b/kernel/module/auth.c
+new file mode 100644
+index 0000000..956ac63
+--- /dev/null
++++ b/kernel/module/auth.c
+@@ -0,0 +1,32 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++/* Module authentication checker
++ *
++ * Copyright (C) 2012 Red Hat, Inc. All Rights Reserved.
++ * Written by David Howells (dhowells@redhat.com)
++ */
++
++#include <linux/export.h>
++#include <linux/module.h>
++#include <linux/moduleparam.h>
++#include <linux/types.h>
++
++#undef MODULE_PARAM_PREFIX
++#define MODULE_PARAM_PREFIX "module."
++
++static bool sig_enforce = IS_ENABLED(CONFIG_MODULE_SIG_FORCE);
++module_param(sig_enforce, bool_enable_only, 0644);
++
++/*
++ * Export sig_enforce kernel cmdline parameter to allow other subsystems rely
++ * on that instead of directly to CONFIG_MODULE_SIG_FORCE config.
++ */
++bool is_module_sig_enforced(void)
++{
++	return sig_enforce;
++}
++EXPORT_SYMBOL(is_module_sig_enforced);
++
++void set_module_sig_enforced(void)
++{
++	sig_enforce = true;
++}
+diff --git a/kernel/module/internal.h b/kernel/module/internal.h
+index 006ada7..f8f425b 100644
+--- a/kernel/module/internal.h
++++ b/kernel/module/internal.h
+@@ -68,7 +68,7 @@ struct load_info {
+ 	Elf_Shdr *sechdrs;
+ 	char *secstrings, *strtab;
+ 	unsigned long symoffs, stroffs, init_typeoffs, core_typeoffs;
+-	bool sig_ok;
++	bool auth_ok;
+ #ifdef CONFIG_KALLSYMS
+ 	unsigned long mod_kallsyms_init_off;
+ #endif
+diff --git a/kernel/module/main.c b/kernel/module/main.c
+index 3e28abb..c1e7613 100644
+--- a/kernel/module/main.c
++++ b/kernel/module/main.c
+@@ -2612,10 +2612,10 @@ static void module_augment_kernel_taints(struct module *mod, struct load_info *i
+ 				mod->name);
+ 		add_taint_module(mod, TAINT_TEST, LOCKDEP_STILL_OK);
+ 	}
+-#ifdef CONFIG_MODULE_SIG
+-	mod->sig_ok = info->sig_ok;
+-	if (!mod->sig_ok) {
+-		pr_notice_once("%s: module verification failed: signature "
++#ifdef CONFIG_MODULE_AUTH
++	mod->auth_ok = info->auth_ok;
++	if (!mod->auth_ok) {
++		pr_notice_once("%s: module authentication failed: signature "
+ 			       "and/or required key missing - tainting "
+ 			       "kernel\n", mod->name);
+ 		add_taint_module(mod, TAINT_UNSIGNED_MODULE, LOCKDEP_STILL_OK);
+diff --git a/kernel/module/signing.c b/kernel/module/signing.c
+index 69d4b17..07a7867 100644
+--- a/kernel/module/signing.c
++++ b/kernel/module/signing.c
+@@ -16,27 +16,6 @@
+ #include <uapi/linux/module.h>
+ #include "internal.h"
+ 
+-#undef MODULE_PARAM_PREFIX
+-#define MODULE_PARAM_PREFIX "module."
+-
+-static bool sig_enforce = IS_ENABLED(CONFIG_MODULE_SIG_FORCE);
+-module_param(sig_enforce, bool_enable_only, 0644);
+-
+-/*
+- * Export sig_enforce kernel cmdline parameter to allow other subsystems rely
+- * on that instead of directly to CONFIG_MODULE_SIG_FORCE config.
+- */
+-bool is_module_sig_enforced(void)
+-{
+-	return sig_enforce;
+-}
+-EXPORT_SYMBOL(is_module_sig_enforced);
+-
+-void set_module_sig_enforced(void)
+-{
+-	sig_enforce = true;
+-}
+-
+ /*
+  * Verify the signature on a module.
+  */
+@@ -84,7 +63,7 @@ int module_sig_check(struct load_info *info, int flags)
+ 		info->len -= markerlen;
+ 		err = mod_verify_sig(mod, info);
+ 		if (!err) {
+-			info->sig_ok = true;
++			info->auth_ok = true;
+ 			return 0;
+ 		}
+ 	}

@@ -46,17 +46,25 @@ stdenv.mkDerivation {
   installTargets = [ (kernel.installTargetFor target) ];
 
   moduleCertificates =
-    if modulesTree != null then
+    if modulesTree != null && !(kernel.features.moduleHashes or false) then
       "${modulesTree}/lib/modules/${kernel.modDirVersion}/modules.cer"
     else
       null;
 
   dontConfigure = true;
+  passthru = kernel.passthru;
 
   preBuild = ''
-    if [[ -v moduleCertificates ]]; then
+    if [[ -v moduleCertificates ]] && grep -q '^CONFIG_MODULE_SIG_ALL=y$' .config; then
       scripts/insert-sys-cert -b vmlinux -c "$moduleCertificates"
     fi
+    ${lib.optionalString (modulesTree != null && (kernel.features.moduleHashes or false)) ''
+      root=${modulesTree}/nix-support/module-hashes-root
+      test "$(wc -c < "$root")" -eq 44
+      ${stdenv.cc.targetPrefix}objcopy --update-section .module_hashes="$root" vmlinux
+      ${stdenv.cc.targetPrefix}objcopy --dump-section .module_hashes=module-hashes-root vmlinux
+      cmp "$root" module-hashes-root
+    ''}
   '';
 
   env = kernel.env // {

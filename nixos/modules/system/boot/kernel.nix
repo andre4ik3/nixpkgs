@@ -25,6 +25,14 @@ let
     ${concatStringsSep "\n" config.boot.kernelModules}
   '';
 
+  systemKernel =
+    if config.boot.kernel.moduleHashes.enable then
+      config.boot.kernelPackages.rebuildImage {
+        modulesTree = config.system.modulesTree;
+      }
+    else
+      kernel;
+
   # A list of attrnames is coerced into an attrset of bools by
   # setting the values to true.
   attrNamesToTrue = types.coercedTo (types.listOf types.str) (
@@ -65,6 +73,11 @@ in
         `grep features pkgs/os-specific/linux/kernel/common-config.nix`
       '';
     };
+
+    boot.kernel.moduleHashes.enable = mkEnableOption ''
+      authentication of the configured in-tree and out-of-tree kernel modules
+      through a Merkle root embedded in the boot image
+    '';
 
     boot.kernelPackages = mkOption {
       default = pkgs.linuxPackages;
@@ -292,7 +305,17 @@ in
         let
           kernel-name = config.boot.kernelPackages.kernel.name or "kernel";
         in
-        modules: (pkgs.aggregateModules modules).override { name = kernel-name + "-modules"; };
+        modules:
+        let
+          aggregated = (pkgs.aggregateModules modules).override { name = kernel-name + "-modules"; };
+        in
+        if config.boot.kernel.moduleHashes.enable then
+          pkgs.finalizeModuleHashes {
+            inherit kernel;
+            modules = aggregated;
+          }
+        else
+          aggregated;
     };
 
     system.requiredKernelConfig = mkOption {
@@ -385,7 +408,7 @@ in
     })
 
     (mkIf config.boot.kernel.enable {
-      system.build = { inherit kernel; };
+      system.build.kernel = systemKernel;
 
       system.modulesTree = [ (lib.getOutput "modules" kernel) ] ++ config.boot.extraModulePackages;
 
@@ -394,7 +417,7 @@ in
       system.systemBuilderArgs.kernelParams = config.boot.kernelParams;
       system.systemBuilderCommands =
         let
-          kernelPath = "${config.boot.kernelPackages.kernel}/" + "${config.system.boot.loader.kernelFile}";
+          kernelPath = "${config.system.build.kernel}/" + "${config.system.boot.loader.kernelFile}";
           initrdPath = "${config.system.build.initialRamdisk}/" + "${config.system.boot.loader.initrdFile}";
         in
         ''
@@ -500,16 +523,25 @@ in
 
       # nixpkgs kernels are assumed to have all required features
       assertions =
-        if config.boot.kernelPackages.kernel ? features then
-          [ ]
-        else
-          let
-            cfg = config.boot.kernelPackages.kernel.config;
-          in
-          map (attrs: {
-            assertion = attrs.assertion cfg;
-            inherit (attrs) message;
-          }) config.system.requiredKernelConfig;
+        optional config.boot.kernel.moduleHashes.enable {
+          assertion = config.boot.kernelPackages.kernel.features.moduleHashes or false;
+          message = ''
+            boot.kernel.moduleHashes.enable requires a kernel patch that advertises
+            features.moduleHashes and retains scripts/modules-merkle-tree.
+          '';
+        }
+        ++ (
+          if config.boot.kernelPackages.kernel ? features then
+            [ ]
+          else
+            let
+              cfg = config.boot.kernelPackages.kernel.config;
+            in
+            map (attrs: {
+              assertion = attrs.assertion cfg;
+              inherit (attrs) message;
+            }) config.system.requiredKernelConfig
+        );
 
     })
 

@@ -1,0 +1,314 @@
+From 4675aa70ec40c5aa7c692b9f4386eafb485f9adc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Thomas=20Wei=C3=9Fschuh?= <linux@weissschuh.net>
+Date: Tue, 5 May 2026 11:05:14 +0200
+Subject: [PATCH 10/17] module: Prepare for additional module authentication
+ mechanisms
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Reorganize the code to make it easier to add the new hash-based module
+authentication.
+
+Also drop the now unnecessary stub for module_sig_check().
+
+Signed-off-by: Thomas Weißschuh <linux@weissschuh.net>
+Reviewed-by: Petr Pavlu <petr.pavlu@suse.com>
+Assisted-by: GPT-5.6-Sol (Codex)
+---
+ arch/s390/kernel/machine_kexec_file.c       |  6 +--
+ include/linux/module_signature.h            | 30 +--------------
+ include/uapi/linux/module_signature.h       | 41 +++++++++++++++++++++
+ kernel/module/auth.c                        | 21 ++++++++---
+ kernel/module/internal.h                    |  8 ----
+ security/integrity/ima/ima_modsig.c         |  8 ++--
+ tools/include/uapi/linux/module_signature.h | 41 +++++++++++++++++++++
+ 7 files changed, 106 insertions(+), 49 deletions(-)
+ create mode 100644 include/uapi/linux/module_signature.h
+ create mode 100644 tools/include/uapi/linux/module_signature.h
+
+diff --git a/arch/s390/kernel/machine_kexec_file.c b/arch/s390/kernel/machine_kexec_file.c
+index a36d7311c668..edf22c567248 100644
+--- a/arch/s390/kernel/machine_kexec_file.c
++++ b/arch/s390/kernel/machine_kexec_file.c
+@@ -28,7 +28,7 @@ const struct kexec_file_ops * const kexec_file_loaders[] = {
+ #ifdef CONFIG_KEXEC_SIG
+ int s390_verify_sig(const char *kernel, unsigned long kernel_len)
+ {
+-	const unsigned long marker_len = sizeof(MODULE_SIG_STRING) - 1;
++	const unsigned long marker_len = sizeof(MODULE_SIGNATURE_MARKER) - 1;
+ 	struct module_signature *ms;
+ 	unsigned long sig_len;
+ 	int ret;
+@@ -40,7 +40,7 @@ int s390_verify_sig(const char *kernel, unsigned long kernel_len)
+ 	if (marker_len > kernel_len)
+ 		return -EKEYREJECTED;
+ 
+-	if (memcmp(kernel + kernel_len - marker_len, MODULE_SIG_STRING,
++	if (memcmp(kernel + kernel_len - marker_len, MODULE_SIGNATURE_MARKER,
+ 		   marker_len))
+ 		return -EKEYREJECTED;
+ 	kernel_len -= marker_len;
+@@ -53,7 +53,7 @@ int s390_verify_sig(const char *kernel, unsigned long kernel_len)
+ 		return -EKEYREJECTED;
+ 	kernel_len -= sig_len;
+ 
+-	if (ms->id_type != PKEY_ID_PKCS7)
++	if (ms->id_type != MODULE_SIGNATURE_TYPE_PKCS7)
+ 		return -EKEYREJECTED;
+ 
+ 	if (ms->algo != 0 ||
+diff --git a/include/linux/module_signature.h b/include/linux/module_signature.h
+index 7eb4b00381ac..db335d46787f 100644
+--- a/include/linux/module_signature.h
++++ b/include/linux/module_signature.h
+@@ -10,35 +10,7 @@
+ #define _LINUX_MODULE_SIGNATURE_H
+ 
+ #include <linux/types.h>
+-
+-/* In stripped ARM and x86-64 modules, ~ is surprisingly rare. */
+-#define MODULE_SIG_STRING "~Module signature appended~\n"
+-
+-enum pkey_id_type {
+-	PKEY_ID_PGP,		/* OpenPGP generated key ID */
+-	PKEY_ID_X509,		/* X.509 arbitrary subjectKeyIdentifier */
+-	PKEY_ID_PKCS7,		/* Signature in PKCS#7 message */
+-};
+-
+-/*
+- * Module signature information block.
+- *
+- * The constituents of the signature section are, in order:
+- *
+- *	- Signer's name
+- *	- Key identifier
+- *	- Signature data
+- *	- Information block
+- */
+-struct module_signature {
+-	u8	algo;		/* Public-key crypto algorithm [0] */
+-	u8	hash;		/* Digest algorithm [0] */
+-	u8	id_type;	/* Key identifier type [PKEY_ID_PKCS7] */
+-	u8	signer_len;	/* Length of signer's name [0] */
+-	u8	key_id_len;	/* Length of key identifier [0] */
+-	u8	__pad[3];
+-	__be32	sig_len;	/* Length of signature data */
+-};
++#include <uapi/linux/module_signature.h>
+ 
+ int mod_check_sig(const struct module_signature *ms, size_t file_len,
+ 		  const char *name);
+diff --git a/include/uapi/linux/module_signature.h b/include/uapi/linux/module_signature.h
+new file mode 100644
+index 000000000000..634c9f1c8fc2
+--- /dev/null
++++ b/include/uapi/linux/module_signature.h
+@@ -0,0 +1,41 @@
++/* SPDX-License-Identifier: GPL-2.0+ WITH Linux-syscall-note */
++/*
++ * Module signature handling.
++ *
++ * Copyright (C) 2012 Red Hat, Inc. All Rights Reserved.
++ * Written by David Howells (dhowells@redhat.com)
++ */
++
++#ifndef _UAPI_LINUX_MODULE_SIGNATURE_H
++#define _UAPI_LINUX_MODULE_SIGNATURE_H
++
++#include <linux/types.h>
++
++/* In stripped ARM and x86-64 modules, ~ is surprisingly rare. */
++#define MODULE_SIGNATURE_MARKER "~Module signature appended~\n"
++
++enum module_signature_type {
++	MODULE_SIGNATURE_TYPE_PKCS7 = 2,	/* Signature in PKCS#7 message */
++};
++
++/*
++ * Module signature information block.
++ *
++ * The constituents of the signature section are, in order:
++ *
++ *	- Signer's name
++ *	- Key identifier
++ *	- Signature data
++ *	- Information block
++ */
++struct module_signature {
++	__u8	algo;		/* Public-key crypto algorithm [0] */
++	__u8	hash;		/* Digest algorithm [0] */
++	__u8	id_type;	/* Key identifier type [enum module_signature_type] */
++	__u8	signer_len;	/* Length of signer's name [0] */
++	__u8	key_id_len;	/* Length of key identifier [0] */
++	__u8	__pad[3];
++	__be32	sig_len;	/* Length of signature data */
++};
++
++#endif /* _UAPI_LINUX_MODULE_SIGNATURE_H */
+diff --git a/kernel/module/auth.c b/kernel/module/auth.c
+index 92ed63207419..2ee512d26790 100644
+--- a/kernel/module/auth.c
++++ b/kernel/module/auth.c
+@@ -37,6 +37,14 @@ void set_module_sig_enforced(void)
+ 	sig_enforce = true;
+ }
+ 
++static __always_inline bool mod_sig_type_valid(enum module_signature_type id_type)
++{
++	if (id_type == MODULE_SIGNATURE_TYPE_PKCS7 && IS_ENABLED(CONFIG_MODULE_SIG))
++		return true;
++
++	return false;
++}
++
+ static int mod_verify_sig(const void *mod, struct load_info *info)
+ {
+ 	struct module_signature ms;
+@@ -48,8 +56,8 @@ static int mod_verify_sig(const void *mod, struct load_info *info)
+ 
+ 	memcpy(&ms, mod + (modlen - sizeof(ms)), sizeof(ms));
+ 
+-	if (ms.id_type != PKEY_ID_PKCS7) {
+-		pr_err("module: not signed with expected PKCS#7 message\n");
++	if (!mod_sig_type_valid(ms.id_type)) {
++		pr_err("module: not signed with expected signature\n");
+ 		return -ENOPKG;
+ 	}
+ 
+@@ -61,13 +69,16 @@ static int mod_verify_sig(const void *mod, struct load_info *info)
+ 	modlen -= sig_len + sizeof(ms);
+ 	info->len = modlen;
+ 
+-	return module_sig_check(mod, modlen, mod + modlen, sig_len);
++	if (ms.id_type == MODULE_SIGNATURE_TYPE_PKCS7 && IS_ENABLED(CONFIG_MODULE_SIG))
++		return module_sig_check(mod, modlen, mod + modlen, sig_len);
++
++	return 0;
+ }
+ 
+ int module_auth_check(struct load_info *info, int flags)
+ {
+ 	int err = -ENODATA;
+-	const unsigned long markerlen = sizeof(MODULE_SIG_STRING) - 1;
++	const unsigned long markerlen = sizeof(MODULE_SIGNATURE_MARKER) - 1;
+ 	const char *reason;
+ 	const void *mod = info->hdr;
+ 	bool mangled_module = flags & (MODULE_INIT_IGNORE_MODVERSIONS |
+@@ -78,7 +89,7 @@ int module_auth_check(struct load_info *info, int flags)
+ 	 */
+ 	if (!mangled_module &&
+ 	    info->len > markerlen &&
+-	    memcmp(mod + info->len - markerlen, MODULE_SIG_STRING, markerlen) == 0) {
++	    memcmp(mod + info->len - markerlen, MODULE_SIGNATURE_MARKER, markerlen) == 0) {
+ 		/* We truncate the module to discard the signature */
+ 		info->len -= markerlen;
+ 		err = mod_verify_sig(mod, info);
+diff --git a/kernel/module/internal.h b/kernel/module/internal.h
+index adc9fd5fecdf..6e018687ed2a 100644
+--- a/kernel/module/internal.h
++++ b/kernel/module/internal.h
+@@ -337,15 +337,7 @@ int module_enforce_rwx_sections(const Elf_Ehdr *hdr, const Elf_Shdr *sechdrs,
+ void module_mark_ro_after_init(const Elf_Ehdr *hdr, Elf_Shdr *sechdrs,
+ 			       const char *secstrings);
+ 
+-#ifdef CONFIG_MODULE_SIG
+ int module_sig_check(const void *mod, size_t mod_len, const void *sig, size_t sig_len);
+-#else /* !CONFIG_MODULE_SIG */
+-static inline int module_sig_check(const void *mod, size_t mod_len,
+-				   const void *sig, size_t sig_len)
+-{
+-	return 0;
+-}
+-#endif /* !CONFIG_MODULE_SIG */
+ 
+ #ifdef CONFIG_MODULE_AUTH
+ int module_auth_check(struct load_info *info, int flags);
+diff --git a/security/integrity/ima/ima_modsig.c b/security/integrity/ima/ima_modsig.c
+index 3f2b578d62b8..fe407d4825d8 100644
+--- a/security/integrity/ima/ima_modsig.c
++++ b/security/integrity/ima/ima_modsig.c
+@@ -40,7 +40,7 @@ struct modsig {
+ int ima_read_modsig(enum ima_hooks func, const void *buf, loff_t buf_len,
+ 		    struct modsig **modsig)
+ {
+-	const size_t marker_len = strlen(MODULE_SIG_STRING);
++	const size_t marker_len = strlen(MODULE_SIGNATURE_MARKER);
+ 	const struct module_signature *sig;
+ 	struct modsig *hdr;
+ 	size_t sig_len;
+@@ -51,13 +51,13 @@ int ima_read_modsig(enum ima_hooks func, const void *buf, loff_t buf_len,
+ 		return -ENOENT;
+ 
+ 	p = buf + buf_len - marker_len;
+-	if (memcmp(p, MODULE_SIG_STRING, marker_len))
++	if (memcmp(p, MODULE_SIGNATURE_MARKER, marker_len))
+ 		return -ENOENT;
+ 
+ 	buf_len -= marker_len;
+ 	sig = (const struct module_signature *)(p - sizeof(*sig));
+ 
+-	if (sig->id_type != PKEY_ID_PKCS7) {
++	if (sig->id_type != MODULE_SIGNATURE_TYPE_PKCS7) {
+ 		pr_err("%s: not signed with expected PKCS#7 message\n", func_tokens[func]);
+ 		return -ENOPKG;
+ 	}
+@@ -110,7 +110,7 @@ void ima_collect_modsig(struct modsig *modsig, const void *buf, loff_t size)
+ 	 * Provide the file contents (minus the appended sig) so that the PKCS7
+ 	 * code can calculate the file hash.
+ 	 */
+-	size -= modsig->raw_pkcs7_len + strlen(MODULE_SIG_STRING) +
++	size -= modsig->raw_pkcs7_len + strlen(MODULE_SIGNATURE_MARKER) +
+ 		sizeof(struct module_signature);
+ 	rc = pkcs7_supply_detached_data(modsig->pkcs7_msg, buf, size);
+ 	if (rc)
+diff --git a/tools/include/uapi/linux/module_signature.h b/tools/include/uapi/linux/module_signature.h
+new file mode 100644
+index 000000000000..634c9f1c8fc2
+--- /dev/null
++++ b/tools/include/uapi/linux/module_signature.h
+@@ -0,0 +1,41 @@
++/* SPDX-License-Identifier: GPL-2.0+ WITH Linux-syscall-note */
++/*
++ * Module signature handling.
++ *
++ * Copyright (C) 2012 Red Hat, Inc. All Rights Reserved.
++ * Written by David Howells (dhowells@redhat.com)
++ */
++
++#ifndef _UAPI_LINUX_MODULE_SIGNATURE_H
++#define _UAPI_LINUX_MODULE_SIGNATURE_H
++
++#include <linux/types.h>
++
++/* In stripped ARM and x86-64 modules, ~ is surprisingly rare. */
++#define MODULE_SIGNATURE_MARKER "~Module signature appended~\n"
++
++enum module_signature_type {
++	MODULE_SIGNATURE_TYPE_PKCS7 = 2,	/* Signature in PKCS#7 message */
++};
++
++/*
++ * Module signature information block.
++ *
++ * The constituents of the signature section are, in order:
++ *
++ *	- Signer's name
++ *	- Key identifier
++ *	- Signature data
++ *	- Information block
++ */
++struct module_signature {
++	__u8	algo;		/* Public-key crypto algorithm [0] */
++	__u8	hash;		/* Digest algorithm [0] */
++	__u8	id_type;	/* Key identifier type [enum module_signature_type] */
++	__u8	signer_len;	/* Length of signer's name [0] */
++	__u8	key_id_len;	/* Length of key identifier [0] */
++	__u8	__pad[3];
++	__be32	sig_len;	/* Length of signature data */
++};
++
++#endif /* _UAPI_LINUX_MODULE_SIGNATURE_H */
+-- 
+2.55.0
+

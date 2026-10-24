@@ -80,7 +80,7 @@ in
 
     boot.uki.settings = {
       UKI = {
-        Linux = lib.mkOptionDefault "${config.boot.kernelPackages.kernel}/${config.system.boot.loader.kernelFile}";
+        Linux = lib.mkOptionDefault "${config.system.build.kernel}/${config.system.boot.loader.kernelFile}";
         Initrd = lib.mkOptionDefault "${config.system.build.initialRamdisk}/${config.system.boot.loader.initrdFile}";
         Cmdline = lib.mkOptionDefault "init=${config.system.build.toplevel}/init ${toString config.boot.kernelParams}";
         Stub = lib.mkOptionDefault "${config.systemd.package}/lib/systemd/boot/efi/linux${efiArch}.efi.stub";

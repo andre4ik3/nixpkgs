@@ -45,7 +45,7 @@ let
           (lib.optionalString (cfg.isoImage.configurationName != null) (" " + cfg.isoImage.configurationName))
         ];
         params = "init=${cfg.system.build.toplevel}/init ${toString cfg.boot.kernelParams} ${toString params}";
-        image = "/boot/${cfg.boot.kernelPackages.kernel + "/" + cfg.system.boot.loader.kernelFile}";
+        image = "/boot/${cfg.system.build.kernel + "/" + cfg.system.boot.loader.kernelFile}";
         initrd = "/boot/${cfg.system.build.initialRamdisk + "/" + cfg.system.boot.loader.initrdFile}";
         class = "installer";
       };
@@ -155,7 +155,7 @@ let
         MENU LABEL ${cfg.isoImage.prependToMenuLabel}${cfg.system.nixos.distroName} ${cfg.system.nixos.label}${cfg.isoImage.appendToMenuLabel}${
           lib.optionalString (cfg.isoImage.configurationName != null) (" " + cfg.isoImage.configurationName)
         }
-        LINUX /boot/${cfg.boot.kernelPackages.kernel + "/" + cfg.system.boot.loader.kernelFile}
+        LINUX /boot/${cfg.system.build.kernel + "/" + cfg.system.boot.loader.kernelFile}
         APPEND init=${cfg.system.build.toplevel}/init ${toString cfg.boot.kernelParams} ${toString params}
         INITRD /boot/${cfg.system.build.initialRamdisk + "/" + cfg.system.boot.loader.initrdFile}
       ''}
@@ -941,8 +941,8 @@ in
           cfg:
           lib.optionals cfg.isoImage.showConfiguration [
             {
-              source = cfg.boot.kernelPackages.kernel + "/" + cfg.system.boot.loader.kernelFile;
-              target = "/boot/" + cfg.boot.kernelPackages.kernel + "/" + cfg.system.boot.loader.kernelFile;
+              source = cfg.system.build.kernel + "/" + cfg.system.boot.loader.kernelFile;
+              target = "/boot/" + cfg.system.build.kernel + "/" + cfg.system.boot.loader.kernelFile;
             }
             {
               source = cfg.system.build.initialRamdisk + "/" + cfg.system.boot.loader.initrdFile;

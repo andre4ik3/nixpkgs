@@ -429,6 +429,7 @@ lib.makeOverridable (
         # Required for building external modules with BTF information.
         "$buildRoot/vmlinux"
         "$buildRoot/tools/bpf/resolve_btfids/resolve_btfids"
+        "$buildRoot/scripts/modules-merkle-tree"
 
         # Possibly not required by anything, but we kept it before,
         # Fedora and Arch keep it around, and it seems like it might be

@@ -1,0 +1,141 @@
+From 4f4d1747744a5b8d605b1f9ffd462ef59c0e216e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Thomas=20Wei=C3=9Fschuh?= <linux@weissschuh.net>
+Date: Tue, 5 May 2026 11:05:17 +0200
+Subject: [PATCH 13/17] kbuild: move handling of module stripping to
+ Makefile.lib
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+To allow CONFIG_MODULE_HASHES in combination with INSTALL_MOD_STRIP,
+this logc will also be used by Makefile.modfinal.
+
+Move it to a shared location to enable reuse.
+
+Signed-off-by: Thomas Weißschuh <linux@weissschuh.net>
+Reviewed-by: Nicolas Schier <nsc@kernel.org>
+---
+ scripts/Makefile.lib     | 32 ++++++++++++++++++++++++++++++++
+ scripts/Makefile.modinst | 37 +++++--------------------------------
+ 2 files changed, 37 insertions(+), 32 deletions(-)
+
+diff --git a/scripts/Makefile.lib b/scripts/Makefile.lib
+index 1d581ba5df66..2e3e2f74da43 100644
+--- a/scripts/Makefile.lib
++++ b/scripts/Makefile.lib
+@@ -474,6 +474,38 @@ define sed-offsets
+ 	s:->::; p;}'
+ endef
+ 
++#
++# Module Installation
++#
++quiet_cmd_install_mod = INSTALL $@
++      cmd_install_mod = cp $< $@
++
++# Module Strip
++# ---------------------------------------------------------------------------
++#
++# INSTALL_MOD_STRIP, if defined, will cause modules to be stripped after they
++# are installed. If INSTALL_MOD_STRIP is '1', then the default option
++# --strip-debug will be used. Otherwise, INSTALL_MOD_STRIP value will be used
++# as the options to the strip command.
++ifeq ($(INSTALL_MOD_STRIP),1)
++mod-strip-option := --strip-debug
++else
++mod-strip-option := $(INSTALL_MOD_STRIP)
++endif
++
++# Strip
++ifdef INSTALL_MOD_STRIP
++
++quiet_cmd_strip_mod = STRIP   $@
++      cmd_strip_mod = $(STRIP) $(mod-strip-option) $@
++
++else
++
++quiet_cmd_strip_mod =
++      cmd_strip_mod = :
++
++endif
++
+ # Use filechk to avoid rebuilds when a header changes, but the resulting file
+ # does not
+ define filechk_offsets
+diff --git a/scripts/Makefile.modinst b/scripts/Makefile.modinst
+index 68708a039a62..b95f613e23c8 100644
+--- a/scripts/Makefile.modinst
++++ b/scripts/Makefile.modinst
+@@ -8,6 +8,7 @@ __modinst:
+ 
+ include $(objtree)/include/config/auto.conf
+ include $(srctree)/scripts/Kbuild.include
++include $(srctree)/scripts/Makefile.lib
+ 
+ install-y :=
+ 
+@@ -36,7 +37,7 @@ install-y += $(addprefix $(MODLIB)/, modules.builtin modules.builtin.modinfo)
+ install-$(CONFIG_BUILTIN_MODULE_RANGES) += $(MODLIB)/modules.builtin.ranges
+ 
+ $(addprefix $(MODLIB)/, modules.builtin modules.builtin.modinfo modules.builtin.ranges): $(MODLIB)/%: % FORCE
+-	$(call cmd,install)
++	$(call cmd,install_mod)
+ 
+ endif
+ 
+@@ -65,40 +66,12 @@ install-$(CONFIG_MODULES) += $(modules)
+ __modinst: $(install-y)
+ 	@:
+ 
+-#
+-# Installation
+-#
+-quiet_cmd_install = INSTALL $@
+-      cmd_install = cp $< $@
+-
+-# Strip
+-#
+-# INSTALL_MOD_STRIP, if defined, will cause modules to be stripped after they
+-# are installed. If INSTALL_MOD_STRIP is '1', then the default option
+-# --strip-debug will be used. Otherwise, INSTALL_MOD_STRIP value will be used
+-# as the options to the strip command.
+-ifdef INSTALL_MOD_STRIP
+-
+ ifdef CONFIG_MODULE_HASHES
+ ifeq ($(KBUILD_EXTMOD),)
++ifdef INSTALL_MOD_STRIP
+ $(error CONFIG_MODULE_HASHES and INSTALL_MOD_STRIP are mutually exclusive)
+ endif
+ endif
+-
+-ifeq ($(INSTALL_MOD_STRIP),1)
+-strip-option := --strip-debug
+-else
+-strip-option := $(INSTALL_MOD_STRIP)
+-endif
+-
+-quiet_cmd_strip = STRIP   $@
+-      cmd_strip = $(STRIP) $(strip-option) $@
+-
+-else
+-
+-quiet_cmd_strip =
+-      cmd_strip = :
+-
+ endif
+ 
+ #
+@@ -131,8 +104,8 @@ endif
+ $(foreach dir, $(sort $(dir $(install-y))), $(shell mkdir -p $(dir)))
+ 
+ $(dst)/%.ko: %.ko FORCE
+-	$(call cmd,install)
+-	$(call cmd,strip)
++	$(call cmd,install_mod)
++	$(call cmd,strip_mod)
+ 	$(call cmd,sign)
+ 
+ ifdef CONFIG_MODULES
+-- 
+2.55.0
+

@@ -1,0 +1,34 @@
+From 757a4e78a95cdafc4f244315dd4d3937bd6f0052 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Thomas=20Wei=C3=9Fschuh?= <linux@weissschuh.net>
+Date: Tue, 5 May 2026 11:05:08 +0200
+Subject: [PATCH 04/17] module: Drop pointless debugging message
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This is the only instance of pr_devel() in the whole module subsystem
+and essentially useless.
+
+Drop it.
+
+Signed-off-by: Thomas Weißschuh <linux@weissschuh.net>
+---
+ kernel/module/signing.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/kernel/module/signing.c b/kernel/module/signing.c
+index a2ff4242e623..b5b64e3ade68 100644
+--- a/kernel/module/signing.c
++++ b/kernel/module/signing.c
+@@ -46,8 +46,6 @@ int mod_verify_sig(const void *mod, struct load_info *info)
+ 	size_t sig_len, modlen = info->len;
+ 	int ret;
+ 
+-	pr_devel("==>%s(,%zu)\n", __func__, modlen);
+-
+ 	if (modlen <= sizeof(ms))
+ 		return -EBADMSG;
+ 
+-- 
+2.55.0
+

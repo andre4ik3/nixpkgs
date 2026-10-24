@@ -748,6 +748,8 @@ with pkgs;
         ;
     };
 
+  finalizeModuleHashes = args: callPackage ../os-specific/linux/kmod/finalize-module-hashes.nix args;
+
   mkBinaryCache = callPackage ../build-support/binary-cache { };
 
   mkShell = callPackage ../build-support/mkshell { };

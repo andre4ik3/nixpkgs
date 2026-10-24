@@ -1,0 +1,84 @@
+From 9472cb7ee63e1fc34e1d5079b734c46ea6ce0594 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Thomas=20Wei=C3=9Fschuh?= <linux@weissschuh.net>
+Date: Tue, 5 May 2026 11:05:14 +0200
+Subject: [PATCH 10/17] module: Prepare for additional module authentication
+ mechanisms
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Reorganize the code to make it easier to add the new hash-based module
+authentication.
+
+Also drop the now unnecessary stub for module_sig_check().
+
+Signed-off-by: Thomas Weißschuh <linux@weissschuh.net>
+Reviewed-by: Petr Pavlu <petr.pavlu@suse.com>
+Assisted-by: GPT-5.6-Sol (Codex)
+---
+ kernel/module/auth.c     | 17 ++++++++++++++---
+ kernel/module/internal.h |  8 --------
+ 2 files changed, 14 insertions(+), 11 deletions(-)
+
+diff --git a/kernel/module/auth.c b/kernel/module/auth.c
+index 21e49eb..2ee512d 100644
+--- a/kernel/module/auth.c
++++ b/kernel/module/auth.c
+@@ -37,6 +37,14 @@ void set_module_sig_enforced(void)
+ 	sig_enforce = true;
+ }
+ 
++static __always_inline bool mod_sig_type_valid(enum module_signature_type id_type)
++{
++	if (id_type == MODULE_SIGNATURE_TYPE_PKCS7 && IS_ENABLED(CONFIG_MODULE_SIG))
++		return true;
++
++	return false;
++}
++
+ static int mod_verify_sig(const void *mod, struct load_info *info)
+ {
+ 	struct module_signature ms;
+@@ -48,8 +56,8 @@ static int mod_verify_sig(const void *mod, struct load_info *info)
+ 
+ 	memcpy(&ms, mod + (modlen - sizeof(ms)), sizeof(ms));
+ 
+-	if (ms.id_type != MODULE_SIGNATURE_TYPE_PKCS7) {
+-		pr_err("module: not signed with expected PKCS#7 message\n");
++	if (!mod_sig_type_valid(ms.id_type)) {
++		pr_err("module: not signed with expected signature\n");
+ 		return -ENOPKG;
+ 	}
+ 
+@@ -61,7 +69,10 @@ static int mod_verify_sig(const void *mod, struct load_info *info)
+ 	modlen -= sig_len + sizeof(ms);
+ 	info->len = modlen;
+ 
+-	return module_sig_check(mod, modlen, mod + modlen, sig_len);
++	if (ms.id_type == MODULE_SIGNATURE_TYPE_PKCS7 && IS_ENABLED(CONFIG_MODULE_SIG))
++		return module_sig_check(mod, modlen, mod + modlen, sig_len);
++
++	return 0;
+ }
+ 
+ int module_auth_check(struct load_info *info, int flags)
+diff --git a/kernel/module/internal.h b/kernel/module/internal.h
+index d923e31..aabe7f8 100644
+--- a/kernel/module/internal.h
++++ b/kernel/module/internal.h
+@@ -335,15 +335,7 @@ int module_enforce_rwx_sections(const Elf_Ehdr *hdr, const Elf_Shdr *sechdrs,
+ void module_mark_ro_after_init(const Elf_Ehdr *hdr, Elf_Shdr *sechdrs,
+ 			       const char *secstrings);
+ 
+-#ifdef CONFIG_MODULE_SIG
+ int module_sig_check(const void *mod, size_t mod_len, const void *sig, size_t sig_len);
+-#else /* !CONFIG_MODULE_SIG */
+-static inline int module_sig_check(const void *mod, size_t mod_len,
+-				   const void *sig, size_t sig_len)
+-{
+-	return 0;
+-}
+-#endif /* !CONFIG_MODULE_SIG */
+ 
+ #ifdef CONFIG_MODULE_AUTH
+ int module_auth_check(struct load_info *info, int flags);

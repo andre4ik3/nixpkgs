@@ -1,0 +1,62 @@
+diff --git a/arch/powerpc/kernel/ima_arch.c b/arch/powerpc/kernel/ima_arch.c
+--- a/arch/powerpc/kernel/ima_arch.c
++++ b/arch/powerpc/kernel/ima_arch.c
+@@ -18,12 +18,12 @@ bool arch_ima_get_secureboot(void)
+  * to be stored as an xattr or as an appended signature.
+  *
+  * To avoid duplicate signature verification as much as possible, the IMA
+- * policy rule for module appraisal is added only if CONFIG_MODULE_SIG
+- * is not enabled.
++ * policy rule for module appraisal is added only if neither module signatures
++ * nor module hashes are enabled.
+  */
+ static const char *const secure_rules[] = {
+ 	"appraise func=KEXEC_KERNEL_CHECK appraise_type=imasig|modsig",
+-#ifndef CONFIG_MODULE_SIG
++#if !defined(CONFIG_MODULE_SIG) && !defined(CONFIG_MODULE_HASHES)
+ 	"appraise func=MODULE_CHECK appraise_type=imasig|modsig",
+ #endif
+ 	NULL
+@@ -50,7 +50,7 @@ static const char *const secure_and_trusted_rules[] = {
+ 	"measure func=KEXEC_KERNEL_CHECK template=ima-modsig",
+ 	"measure func=MODULE_CHECK template=ima-modsig",
+ 	"appraise func=KEXEC_KERNEL_CHECK appraise_type=imasig|modsig",
+-#ifndef CONFIG_MODULE_SIG
++#if !defined(CONFIG_MODULE_SIG) && !defined(CONFIG_MODULE_HASHES)
+ 	"appraise func=MODULE_CHECK appraise_type=imasig|modsig",
+ #endif
+ 	NULL
+diff --git a/kernel/module/hashes.c b/kernel/module/hashes.c
+--- a/kernel/module/hashes.c
++++ b/kernel/module/hashes.c
+@@ -123,8 +123,8 @@ int module_hash_check(const void *mod, size_t mod_len, const void *sig, size_t s
+ 
+ 	proof_size = struct_size(proof, hash_sigs, root.levels);
+ 
+ 	if (sig_len != proof_size)
+-		return -ENOPKG;
++		return -EBADMSG;
+ 
+ 	proof = (const struct module_hashes_proof *)sig;
+ 	pos = get_unaligned_be32(&proof->pos);
+@@ -132,7 +132,7 @@ int module_hash_check(const void *mod, size_t mod_len, const void *sig, size_t s
+ 	hash_data(mod, mod_len, pos, &modhash);
+ 
+ 	if (!module_hashes_verify_proof(&root, pos, proof->hash_sigs, &modhash))
+-		return -ENOKEY;
++		return -EKEYREJECTED;
+ 
+ 	return 0;
+ }
+diff --git a/security/integrity/ima/ima_efi.c b/security/integrity/ima/ima_efi.c
+--- a/security/integrity/ima/ima_efi.c
++++ b/security/integrity/ima/ima_efi.c
+@@ -55,7 +55,7 @@ static const char * const sb_arch_rules[] = {
+ 	"appraise func=KEXEC_KERNEL_CHECK appraise_type=imasig",
+ #endif /* CONFIG_KEXEC_SIG */
+ 	"measure func=KEXEC_KERNEL_CHECK",
+-#if !IS_ENABLED(CONFIG_MODULE_SIG)
++#if !IS_ENABLED(CONFIG_MODULE_SIG) && !IS_ENABLED(CONFIG_MODULE_HASHES)
+ 	"appraise func=MODULE_CHECK appraise_type=imasig",
+ #endif
+ #if IS_ENABLED(CONFIG_INTEGRITY_MACHINE_KEYRING) && IS_ENABLED(CONFIG_IMA_KEYRINGS_PERMIT_SIGNED_BY_BUILTIN_OR_SECONDARY)

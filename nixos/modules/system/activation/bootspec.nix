@@ -29,7 +29,7 @@ let
                 label = "${config.system.nixos.distroName} ${config.system.nixos.codeName} ${config.system.nixos.label} (Linux ${config.boot.kernelPackages.kernel.modDirVersion})";
               }
               // lib.optionalAttrs config.boot.kernel.enable {
-                kernel = "${config.boot.kernelPackages.kernel}/${config.system.boot.loader.kernelFile}";
+                kernel = "${config.system.build.kernel}/${config.system.boot.loader.kernelFile}";
                 kernelParams = config.boot.kernelParams;
               }
               // lib.optionalAttrs config.boot.initrd.enable {

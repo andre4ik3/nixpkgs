@@ -1,0 +1,457 @@
+From 7d2326d786c00dc5e5ed11758731a9474a3815b0 Mon Sep 17 00:00:00 2001
+From: User <user@localhost>
+Date: Thu, 27 Aug 2026 14:09:00 +0000
+Subject: [PATCH 15/17] module: address authentication review feedback
+
+Assisted-by: GPT-5.6-Sol (Codex)
+Assisted-by: GPT-6.1 Sol (Codex)
+---
+ .../admin-guide/kernel-parameters.txt         | 11 ++++---
+ Documentation/admin-guide/module-signing.rst  |  6 ++--
+ Documentation/security/self-protection.rst    |  2 +-
+ .../zh_CN/security/self-protection.rst        |  2 +-
+ arch/powerpc/configs/skiroot_defconfig        |  2 +-
+ arch/powerpc/kernel/ima_arch.c                |  2 +-
+ include/linux/module.h                        |  8 ++---
+ include/linux/module_signature.h              |  4 +--
+ kernel/module/Kconfig                         | 21 ++++++++-----
+ kernel/module/auth.c                          | 31 ++++++++++---------
+ kernel/module/internal.h                      |  2 +-
+ kernel/module/main.c                          |  6 ++--
+ kernel/module_signature.c                     |  6 ++--
+ security/integrity/ima/ima_efi.c              |  2 +-
+ security/integrity/ima/ima_main.c             |  8 ++---
+ security/integrity/ima/ima_modsig.c           |  2 +-
+ security/lockdown/Kconfig                     |  1 -
+ tools/testing/selftests/vsock/config          |  2 +-
+ 18 files changed, 64 insertions(+), 54 deletions(-)
+
+diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
+index e75344f..0bb2788 100644
+--- a/Documentation/admin-guide/kernel-parameters.txt
++++ b/Documentation/admin-guide/kernel-parameters.txt
+@@ -4227,12 +4227,15 @@ Kernel parameters
+ 			trigger a WARN_ON() instead of a pr_warn(). Note that
+ 			if MODULE_DEBUG_AUTOLOAD_DUPS_TRACE is set, WARN_ON()s
+ 			will always be issued and this option does nothing.
+-	module.sig_enforce
+-			[KNL] When CONFIG_MODULE_SIG is set, this means that
+-			modules without (valid) signatures will fail to load.
+-			Note that if CONFIG_MODULE_SIG_FORCE is set, that
++	module.auth_enforce
++			[KNL] When CONFIG_MODULE_AUTH is set, this means that
++			modules without valid authentication will fail to load.
++			Note that if CONFIG_MODULE_AUTH_FORCE is set, that
+ 			is always true, so this option does nothing.
+ 
++	module.sig_enforce
++			[KNL] Compatibility alias for module.auth_enforce.
++
+ 	module_blacklist=  [KNL] Do not load a comma-separated list of
+ 			modules.  Useful for debugging problem modules.
+ 
+diff --git a/Documentation/admin-guide/module-signing.rst b/Documentation/admin-guide/module-signing.rst
+index 7f2f127..9c7a1a6 100644
+--- a/Documentation/admin-guide/module-signing.rst
++++ b/Documentation/admin-guide/module-signing.rst
+@@ -48,8 +48,8 @@ the kernel configuration and turning on::
+ 
+ This has a number of options available:
+ 
+- (1) :menuselection:`Require modules to be validly signed`
+-     (``CONFIG_MODULE_SIG_FORCE``)
++ (1) :menuselection:`Require modules to be authenticated`
++     (``CONFIG_MODULE_AUTH_FORCE``)
+ 
+      This specifies how the kernel should deal with a module that has a
+      signature for which the key is not known or a module that is unsigned.
+@@ -267,7 +267,7 @@ done in userspace.  The signature checking is all done within the kernel.
+ Non-valid signatures and unsigned modules
+ =========================================
+ 
+-If ``CONFIG_MODULE_SIG_FORCE`` is enabled or module.sig_enforce=1 is supplied on
++If ``CONFIG_MODULE_AUTH_FORCE`` is enabled or module.auth_enforce=1 is supplied on
+ the kernel command line, the kernel will only load validly signed modules
+ for which it has a public key.   Otherwise, it will also load modules that are
+ unsigned.   Any module for which the kernel has a key, but which proves to have
+diff --git a/Documentation/security/self-protection.rst b/Documentation/security/self-protection.rst
+index a32ca23..6fbadd6 100644
+--- a/Documentation/security/self-protection.rst
++++ b/Documentation/security/self-protection.rst
+@@ -135,7 +135,7 @@ for debate in some scenarios.)
+ To protect against even privileged users, systems may need to either
+ disable module loading entirely (e.g. monolithic kernel builds or
+ modules_disabled sysctl), or provide signed modules (e.g.
+-``CONFIG_MODULE_SIG_FORCE``, or dm-crypt with LoadPin), to keep from having
++``CONFIG_MODULE_AUTH_FORCE``, or dm-crypt with LoadPin), to keep from having
+ root load arbitrary kernel code via the module loader interface.
+ 
+ 
+diff --git a/Documentation/translations/zh_CN/security/self-protection.rst b/Documentation/translations/zh_CN/security/self-protection.rst
+index ad96bb4..36758f5 100644
+--- a/Documentation/translations/zh_CN/security/self-protection.rst
++++ b/Documentation/translations/zh_CN/security/self-protection.rst
+@@ -119,7 +119,7 @@ CONFIG_COMPAT。然而，这种情况通常不可行。
+ 
+ 为了防止特权用户的攻击，系统可能需要完全禁止模块加载（例如，通
+ 过单体内核构建或modules_disabled sysctl），或者使用签名模块（例
+-如，CONFIG_MODULE_SIG_FORCE或通过LoadPin保护的dm-crypt），以防
++如，CONFIG_MODULE_AUTH_FORCE或通过LoadPin保护的dm-crypt），以防
+ 止root用户通过模块加载器加载任意内核代码。
+ 
+ 内存完整性
+diff --git a/arch/powerpc/configs/skiroot_defconfig b/arch/powerpc/configs/skiroot_defconfig
+index 005536e..479c2ab 100644
+--- a/arch/powerpc/configs/skiroot_defconfig
++++ b/arch/powerpc/configs/skiroot_defconfig
+@@ -51,7 +51,7 @@ CONFIG_JUMP_LABEL=y
+ CONFIG_STRICT_KERNEL_RWX=y
+ CONFIG_MODULES=y
+ CONFIG_MODULE_UNLOAD=y
+-CONFIG_MODULE_SIG_FORCE=y
++CONFIG_MODULE_AUTH_FORCE=y
+ CONFIG_MODULE_SIG_SHA512=y
+ CONFIG_PARTITION_ADVANCED=y
+ # CONFIG_MQ_IOSCHED_DEADLINE is not set
+diff --git a/arch/powerpc/kernel/ima_arch.c b/arch/powerpc/kernel/ima_arch.c
+index 17f9304..5e5a09f 100644
+--- a/arch/powerpc/kernel/ima_arch.c
++++ b/arch/powerpc/kernel/ima_arch.c
+@@ -58,7 +58,7 @@ static const char *const secure_and_trusted_rules[] = {
+ const char *const *arch_get_ima_policy(void)
+ {
+ 	if (is_ppc_secureboot_enabled()) {
+-		set_module_sig_enforced();
++		set_module_auth_enforced();
+ 
+ 		if (is_ppc_trustedboot_enabled())
+ 			return secure_and_trusted_rules;
+diff --git a/include/linux/module.h b/include/linux/module.h
+index 67f68ac..33d12d7 100644
+--- a/include/linux/module.h
++++ b/include/linux/module.h
+@@ -915,21 +915,21 @@ static inline bool retpoline_module_ok(bool has_retpoline)
+ #endif
+ 
+ #ifdef CONFIG_MODULE_AUTH
+-bool is_module_sig_enforced(void);
++bool is_module_auth_enforced(void);
+ 
+-void set_module_sig_enforced(void);
++void set_module_auth_enforced(void);
+ 
+ static inline bool module_auth_ok(struct module *module)
+ {
+ 	return module->auth_ok;
+ }
+ #else	/* !CONFIG_MODULE_AUTH */
+-static inline bool is_module_sig_enforced(void)
++static inline bool is_module_auth_enforced(void)
+ {
+ 	return false;
+ }
+ 
+-static inline void set_module_sig_enforced(void)
++static inline void set_module_auth_enforced(void)
+ {
+ }
+ 
+diff --git a/include/linux/module_signature.h b/include/linux/module_signature.h
+index db335d4..6d9ad44 100644
+--- a/include/linux/module_signature.h
++++ b/include/linux/module_signature.h
+@@ -12,7 +12,7 @@
+ #include <linux/types.h>
+ #include <uapi/linux/module_signature.h>
+ 
+-int mod_check_sig(const struct module_signature *ms, size_t file_len,
+-		  const char *name);
++int mod_check_sig_header(const struct module_signature *ms, size_t file_len,
++			 const char *name);
+ 
+ #endif /* _LINUX_MODULE_SIGNATURE_H */
+diff --git a/kernel/module/Kconfig b/kernel/module/Kconfig
+index a5b3807..afcb2a9 100644
+--- a/kernel/module/Kconfig
++++ b/kernel/module/Kconfig
+@@ -251,6 +251,7 @@ config MODULE_SRCVERSION_ALL
+ 
+ config MODULE_SIG
+ 	bool "Module signature verification"
++	default y if SECURITY_LOCKDOWN_LSM && !MODULE_HASHES
+ 	select MODULE_SIG_FORMAT
+ 	help
+ 	  Check modules for valid signatures upon load: the signature
+@@ -272,26 +273,29 @@ config MODULE_SIG
+ 	  inclusion into an initramfs that wants the module size reduced.
+ 
+ config MODULE_AUTH
+-	def_bool MODULE_SIG || MODULE_HASHES
++	def_bool MODULE_SIG || MODULE_HASHES || SECURITY_LOCKDOWN_LSM
+ 
+-config MODULE_SIG_FORCE
+-	bool "Require modules to be validly signed"
++config MODULE_AUTH_FORCE
++	bool "Require modules to be authenticated"
++	default MODULE_SIG_FORCE
+ 	depends on MODULE_AUTH
+ 	help
+-	  Reject unsigned modules or signed modules for which we don't have a
+-	  key.  Without this, such modules will simply taint the kernel.
++	  Reject modules that cannot be authenticated by any enabled module
++	  authentication mechanism. Without this, such modules will simply
++	  taint the kernel.
+ 
+ if MODULE_SIG || IMA_APPRAISE_MODSIG
+ 
+ config MODULE_SIG_ALL
+ 	bool "Automatically sign all modules"
++	depends on !MODULE_HASHES
+ 	default y
+ 	help
+ 	  Sign all modules during make modules_install. Without this option,
+ 	  modules must be signed manually, using the scripts/sign-file tool.
+ 
+ comment "Do not forget to sign required modules with scripts/sign-file"
+-	depends on MODULE_SIG_FORCE && !MODULE_SIG_ALL && !MODULE_HASHES
++	depends on MODULE_AUTH_FORCE && !MODULE_SIG_ALL && !MODULE_HASHES
+ 
+ choice
+ 	prompt "Hash algorithm to sign modules"
+@@ -408,7 +412,6 @@ endif # MODULE_COMPRESS
+ 
+ config MODULE_HASHES
+ 	bool "Hash-based module authentication"
+-	depends on !MODULE_SIG_ALL
+ 	depends on !IMA_APPRAISE_MODSIG
+ 	select MODULE_SIG_FORMAT
+ 	select CRYPTO_LIB_SHA256
+@@ -486,3 +489,7 @@ config MODULES_TREE_LOOKUP
+ 	depends on PERF_EVENTS || TRACING || CFI
+ 
+ endif # MODULES
++
++config MODULE_SIG_FORCE
++	bool
++	transitional
+diff --git a/kernel/module/auth.c b/kernel/module/auth.c
+index cf3fe3f..b0fa207 100644
+--- a/kernel/module/auth.c
++++ b/kernel/module/auth.c
+@@ -19,25 +19,26 @@
+ #undef MODULE_PARAM_PREFIX
+ #define MODULE_PARAM_PREFIX "module."
+ 
+-static bool sig_enforce = IS_ENABLED(CONFIG_MODULE_SIG_FORCE);
+-module_param(sig_enforce, bool_enable_only, 0644);
++static bool auth_enforce = IS_ENABLED(CONFIG_MODULE_AUTH_FORCE);
++module_param(auth_enforce, bool_enable_only, 0644);
++module_param_named(sig_enforce, auth_enforce, bool_enable_only, 0644);
+ 
+ /*
+- * Export sig_enforce kernel cmdline parameter to allow other subsystems rely
+- * on that instead of directly to CONFIG_MODULE_SIG_FORCE config.
++ * Export auth_enforce kernel cmdline parameter to allow other subsystems to
++ * rely on that instead of directly on CONFIG_MODULE_AUTH_FORCE.
+  */
+-bool is_module_sig_enforced(void)
++bool is_module_auth_enforced(void)
+ {
+-	return sig_enforce;
++	return auth_enforce;
+ }
+-EXPORT_SYMBOL(is_module_sig_enforced);
++EXPORT_SYMBOL(is_module_auth_enforced);
+ 
+-void set_module_sig_enforced(void)
++void set_module_auth_enforced(void)
+ {
+-	sig_enforce = true;
++	auth_enforce = true;
+ }
+ 
+-static __always_inline bool mod_sig_type_valid(enum module_signature_type id_type)
++static __always_inline bool module_auth_type_valid(enum module_signature_type id_type)
+ {
+ 	if (id_type == MODULE_SIGNATURE_TYPE_PKCS7 && IS_ENABLED(CONFIG_MODULE_SIG))
+ 		return true;
+@@ -48,7 +49,7 @@ static __always_inline bool mod_sig_type_valid(enum module_signature_type id_typ
+ 	return false;
+ }
+ 
+-static int mod_verify_sig(const void *mod, struct load_info *info)
++static int mod_dispatch_auth_check(const void *mod, struct load_info *info)
+ {
+ 	struct module_signature ms;
+ 	size_t sig_len, modlen = info->len;
+@@ -59,12 +60,12 @@ static int mod_verify_sig(const void *mod, struct load_info *info)
+ 
+ 	memcpy(&ms, mod + (modlen - sizeof(ms)), sizeof(ms));
+ 
+-	if (!mod_sig_type_valid(ms.id_type)) {
++	if (!module_auth_type_valid(ms.id_type)) {
+ 		pr_err("module: not signed with expected signature\n");
+ 		return -ENOPKG;
+ 	}
+ 
+-	ret = mod_check_sig(&ms, modlen, "module");
++	ret = mod_check_sig_header(&ms, modlen, "module");
+ 	if (ret)
+ 		return ret;
+ 
+@@ -98,7 +99,7 @@ int module_auth_check(struct load_info *info, int flags)
+ 	    memcmp(mod + info->len - markerlen, MODULE_SIGNATURE_MARKER, markerlen) == 0) {
+ 		/* We truncate the module to discard the signature */
+ 		info->len -= markerlen;
+-		err = mod_verify_sig(mod, info);
++		err = mod_dispatch_auth_check(mod, info);
+ 		if (!err) {
+ 			info->auth_ok = true;
+ 			return 0;
+@@ -130,7 +131,7 @@ int module_auth_check(struct load_info *info, int flags)
+ 		return err;
+ 	}
+ 
+-	if (is_module_sig_enforced()) {
++	if (is_module_auth_enforced()) {
+ 		pr_notice("Loading of %s is rejected\n", reason);
+ 		return -EKEYREJECTED;
+ 	}
+diff --git a/kernel/module/internal.h b/kernel/module/internal.h
+index 259e8ca..2e35c85 100644
+--- a/kernel/module/internal.h
++++ b/kernel/module/internal.h
+@@ -64,7 +64,7 @@ struct load_info {
+ 	/* pointer to module in temporary copy, freed at end of load_module() */
+ 	struct module *mod;
+ 	Elf_Ehdr *hdr;
+-	size_t len;
++	unsigned long len;
+ 	Elf_Shdr *sechdrs;
+ 	char *secstrings, *strtab;
+ 	unsigned long symoffs, stroffs, init_typeoffs, core_typeoffs;
+diff --git a/kernel/module/main.c b/kernel/module/main.c
+index 0e944d0..c5c033e 100644
+--- a/kernel/module/main.c
++++ b/kernel/module/main.c
+@@ -1897,7 +1897,7 @@ static int validate_section_offset(const struct load_info *info, Elf_Shdr *shdr)
+ static int elf_validity_ehdr(const struct load_info *info)
+ {
+ 	if (info->len < sizeof(*(info->hdr))) {
+-		pr_err("Invalid ELF header len %zu\n", info->len);
++		pr_err("Invalid ELF header len %lu\n", info->len);
+ 		return -ENOEXEC;
+ 	}
+ 	if (memcmp(info->hdr->e_ident, ELFMAG, SELFMAG) != 0) {
+@@ -2615,8 +2615,8 @@ static void module_augment_kernel_taints(struct module *mod, struct load_info *i
+ #ifdef CONFIG_MODULE_AUTH
+ 	mod->auth_ok = info->auth_ok;
+ 	if (!mod->auth_ok) {
+-		pr_notice_once("%s: module authentication failed: signature "
+-			       "and/or required key missing - tainting "
++		pr_notice_once("%s: module authentication failed: authentication "
++			       "missing or invalid - tainting "
+ 			       "kernel\n", mod->name);
+ 		add_taint_module(mod, TAINT_UNSIGNED_MODULE, LOCKDEP_STILL_OK);
+ 	}
+diff --git a/kernel/module_signature.c b/kernel/module_signature.c
+index 4d0476b..29f6b7a 100644
+--- a/kernel/module_signature.c
++++ b/kernel/module_signature.c
+@@ -12,14 +12,14 @@
+ #include <asm/byteorder.h>
+ 
+ /**
+- * mod_check_sig - check that the given signature is sane
++ * mod_check_sig_header - check that the given signature header is sane
+  *
+  * @ms:		Signature to check.
+  * @file_len:	Size of the file to which @ms is appended.
+  * @name:	What is being checked. Used for error messages.
+  */
+-int mod_check_sig(const struct module_signature *ms, size_t file_len,
+-		  const char *name)
++int mod_check_sig_header(const struct module_signature *ms, size_t file_len,
++			 const char *name)
+ {
+ 	if (be32_to_cpu(ms->sig_len) >= file_len - sizeof(*ms))
+ 		return -EBADMSG;
+diff --git a/security/integrity/ima/ima_efi.c b/security/integrity/ima/ima_efi.c
+index be79110..1d1b5d0 100644
+--- a/security/integrity/ima/ima_efi.c
++++ b/security/integrity/ima/ima_efi.c
+@@ -27,7 +27,7 @@ static const char * const sb_arch_rules[] = {
+ const char * const *arch_get_ima_policy(void)
+ {
+ 	if (IS_ENABLED(CONFIG_IMA_ARCH_POLICY) && arch_get_secureboot()) {
+-		set_module_sig_enforced();
++		set_module_auth_enforced();
+ 		set_kexec_sig_enforced();
+ 		return sb_arch_rules;
+ 	}
+diff --git a/security/integrity/ima/ima_main.c b/security/integrity/ima/ima_main.c
+index ab1e53b..b6734ab 100644
+--- a/security/integrity/ima/ima_main.c
++++ b/security/integrity/ima/ima_main.c
+@@ -1001,7 +1001,7 @@ static int ima_post_read_file(struct file *file, char *buf, loff_t size,
+  */
+ static int ima_load_data(enum kernel_load_data_id id, bool contents)
+ {
+-	bool ima_enforce, sig_enforce;
++	bool auth_enforce, ima_enforce;
+ 
+ 	ima_enforce =
+ 		(ima_appraise & IMA_APPRAISE_ENFORCE) == IMA_APPRAISE_ENFORCE;
+@@ -1025,11 +1025,11 @@ static int ima_load_data(enum kernel_load_data_id id, bool contents)
+ 		}
+ 		break;
+ 	case LOADING_MODULE:
+-		sig_enforce = is_module_sig_enforced();
++		auth_enforce = is_module_auth_enforced();
+ 
+-		if (ima_enforce && (!sig_enforce
++		if (ima_enforce && (!auth_enforce
+ 				    && (ima_appraise & IMA_APPRAISE_MODULES))) {
+-			pr_err("impossible to appraise a module without a file descriptor. sig_enforce kernel parameter might help\n");
++			pr_err("impossible to appraise a module without a file descriptor. auth_enforce kernel parameter might help\n");
+ 			return -EACCES;	/* INTEGRITY_UNKNOWN */
+ 		}
+ 		break;
+diff --git a/security/integrity/ima/ima_modsig.c b/security/integrity/ima/ima_modsig.c
+index ebfcdd3..500fc6b 100644
+--- a/security/integrity/ima/ima_modsig.c
++++ b/security/integrity/ima/ima_modsig.c
+@@ -62,7 +62,7 @@ int ima_read_modsig(enum ima_hooks func, const void *buf, loff_t buf_len,
+ 		return -ENOPKG;
+ 	}
+ 
+-	rc = mod_check_sig(sig, buf_len, func_tokens[func]);
++	rc = mod_check_sig_header(sig, buf_len, func_tokens[func]);
+ 	if (rc)
+ 		return rc;
+ 
+diff --git a/security/lockdown/Kconfig b/security/lockdown/Kconfig
+index 60b240e..7a1d213 100644
+--- a/security/lockdown/Kconfig
++++ b/security/lockdown/Kconfig
+@@ -1,7 +1,6 @@
+ config SECURITY_LOCKDOWN_LSM
+ 	bool "Basic module for enforcing kernel lockdown"
+ 	depends on SECURITY
+-	depends on !MODULES || MODULE_SIG || MODULE_HASHES
+ 	help
+ 	  Build support for an LSM that enforces a coarse kernel lockdown
+ 	  behaviour.
+diff --git a/tools/testing/selftests/vsock/config b/tools/testing/selftests/vsock/config
+index 5f0a4f1..e79bfa5 100644
+--- a/tools/testing/selftests/vsock/config
++++ b/tools/testing/selftests/vsock/config
+@@ -85,7 +85,7 @@ CONFIG_BINFMT_SCRIPT=y
+ CONFIG_SHMEM=y
+ CONFIG_TMPFS=y
+ CONFIG_UNIX=y
+-CONFIG_MODULE_SIG_FORCE=n
++CONFIG_MODULE_AUTH_FORCE=n
+ CONFIG_DEVTMPFS=y
+ CONFIG_TTY=y
+ CONFIG_VT=y

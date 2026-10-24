@@ -47,7 +47,9 @@ for module in $rootModules; do
                 # contains the paths of the *.gcda coverage data output files
                 # (which it doesn't actually use...).  Get rid of them to prevent
                 # the whole kernel from being included in the initrd.
-                nuke-refs "$target"
+                if test "$preserveModuleBytes" != true; then
+                    nuke-refs "$target"
+                fi
                 echo "$target" >> $out/insmod-list;;
              *)
                 echo "  unexpected modprobe output: $cmd $module"
