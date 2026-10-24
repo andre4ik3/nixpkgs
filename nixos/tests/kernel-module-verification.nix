@@ -69,6 +69,13 @@ in
     }:
     {
       boot.kernelPackages = if latestKernel then pkgs.linuxPackages_latest else pkgs.linuxPackages;
+      boot.kernelPatches = [
+        {
+          name = "module-signing";
+          patch = null;
+          structuredExtraConfig.MODULE_SIG_ALL = lib.mkForce lib.kernel.yes;
+        }
+      ];
 
       boot.kernelParams = [ "module.sig_enforce=1" ];
 

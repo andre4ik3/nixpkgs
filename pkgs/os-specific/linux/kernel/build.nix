@@ -539,7 +539,7 @@ lib.makeOverridable (
       # Delete empty directories
       find -empty -type d -delete
 
-      if [[ -v modules ]]; then
+      if [[ -v modules ]] && grep -q '^CONFIG_MODULE_SIG_ALL=y$' "$buildRoot/.config"; then
         # Replace the individual kmodigest single‐module certificates (see
         # `common-flags.nix`) with a concatenated `modules.cer`.
         cd -- "$modules/lib/modules/${modDirVersion}"

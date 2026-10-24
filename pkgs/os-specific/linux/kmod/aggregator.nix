@@ -43,10 +43,12 @@ buildEnv {
         cd -- "$out/lib/modules/$kernelVersion"
 
         # Merge the single‐module certificates for external modules.
-        cp --no-preserve=mode,ownership --remove-destination \
-          -- "$(readlink -f modules.cer)" modules.cer
-        sed "1,$(wc -l < modules.order)d; s/\.ko.*/.ko.cer/" modules.dep \
-            | xargs -d'\n' cat >> modules.cer
+        if test -e modules.cer; then
+            cp --no-preserve=mode,ownership --remove-destination \
+              -- "$(readlink -f modules.cer)" modules.cer
+            sed "1,$(wc -l < modules.order)d; s/\.ko.*/.ko.cer/" modules.dep \
+                | xargs -d'\n' cat >> modules.cer
+        fi
     fi
   '';
 }
