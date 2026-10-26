@@ -88,6 +88,12 @@
           "systemd-pcrextend.socket"
           "systemd-pcrextend@.service"
         ];
+        boot.initrd.systemd.sockets.systemd-pcrextend.wantedBy = [ "sockets.target" ];
+        boot.initrd.systemd.services."systemd-cryptsetup@" = {
+          overrideStrategy = "asDropin";
+          wants = [ "systemd-pcrextend.socket" ];
+          after = [ "systemd-pcrextend.socket" ];
+        };
 
         boot.initrd.availableKernelModules = [
           "tpm-tis"
